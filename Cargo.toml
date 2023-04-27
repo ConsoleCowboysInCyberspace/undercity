@@ -1,0 +1,14 @@
+[package]
+name = "undercity"
+version = "0.1.0"
+edition = "2021"
+
+[profile.dev]
+opt-level = 1
+
+[dependencies]
+anyhow = "1.0.70"
+bevy = "0.10.1"
+bevy_rapier2d = "0.21.0"
+linkme = "0.3.9"
+rand = "0.8.5"
