@@ -1,14 +1,18 @@
 #![allow(unused, non_snake_case, non_upper_case_globals)]
 
+pub mod map;
+
 use std::ops::Deref;
 
 use bevy::math::{uvec2, vec2};
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::time::TimePlugin;
+use bevy::window::close_on_esc;
 use rand::Rng;
 
 #[derive(Clone, Copy, Debug, Component)]
-struct IsoTransform {
+pub struct IsoTransform {
 	pos: Vec2,
 	scale: f32,
 }
@@ -35,73 +39,12 @@ fn isotransform_update_system(
 	}
 }
 
-#[derive(Clone, Copy, Debug)]
-enum Tile {
-	Floor,
-	WallSolid,
-
-	Random,
-}
-
-impl Tile {
-	fn atlas_index(self) -> UVec2 {
-		match self {
-			Tile::Floor => uvec2(4, 2),
-			Tile::WallSolid => uvec2(7, 1),
-			Tile::Random => {
-				let v = rand::thread_rng().gen_range(0 .. 21);
-				uvec2(v % 8, v / 8)
-			},
-		}
-	}
-}
-
-struct Map {
-	size: UVec2,
-	tiles: Vec<Tile>,
-}
-
-impl Map {
-	fn new(size: UVec2) -> Self {
-		Self {
-			size,
-			tiles: vec![Tile::Floor; (size.x * size.y) as _],
-		}
-	}
-
-	fn into_tiles(self, atlas: Handle<Image>) -> impl Iterator<Item = (Vec2, SpriteBundle)> {
-		let size = self.size;
-		self.tiles
-			.into_iter()
-			.enumerate()
-			.map(move |(index, tile)| {
-				let pos = vec2((index as u32 % size.x) as _, (index as u32 / size.x) as _);
-				let atlasIndex = tile.atlas_index().as_vec2() * 64.0;
-				(
-					pos,
-					SpriteBundle {
-						texture: atlas.clone(),
-						sprite: Sprite {
-							rect: Some(Rect::new(
-								atlasIndex.x,
-								atlasIndex.y,
-								atlasIndex.x + 64.0,
-								atlasIndex.y + 64.0,
-							)),
-							..default()
-						},
-						..default()
-					},
-				)
-			})
-	}
-}
-
 fn main() {
 	let mut app = App::new();
 
 	app.add_plugins(DefaultPlugins);
 
+	app.add_system(close_on_esc);
 	app.add_system(isotransform_update_system);
 	app.add_startup_system(|mut cmd: Commands, assets: ResMut<AssetServer>| {
 		cmd.spawn(Camera2dBundle {
@@ -113,9 +56,10 @@ fn main() {
 			..default()
 		});
 
-		let atlas = assets.load("tiles/cocutos.png");
+		use map::*;
+		let mut map = Map::new(UVec2::splat(32));
 
-		let mut map = Map::new(UVec2::splat(16));
+		#[cfg(none)]
 		for y in 0 .. map.size.y {
 			for x in 0 .. map.size.x {
 				let edge = y == 0 || x == 0 || y == map.size.y - 1 || x == map.size.x - 1;
@@ -135,20 +79,21 @@ fn main() {
 			}
 		}
 
-		for (pos, sprite) in map.into_tiles(atlas.clone()) {
-			cmd.spawn((IsoTransform { pos, scale: 32.0 }, sprite))
-				.with_children(|b| {
-					let ai = Tile::Floor.atlas_index().as_vec2() * 64.0;
-					b.spawn(SpriteBundle {
-						texture: atlas.clone(),
-						sprite: Sprite {
-							rect: Some(Rect::new(ai.x, ai.y, ai.x + 64.0, ai.y + 64.0)),
-							..default()
-						},
-						transform: Transform::from_xyz(0.0, 0.0, -0.5),
-						..default()
-					});
-				});
+		map.tiles[0] = Tile {
+			tile: TileType::Floor(FloorType::Tileset),
+			..default()
+		};
+		map.tiles[2] = Tile {
+			tile: TileType::Floor(FloorType::LavaBlue),
+			..default()
+		};
+		map.tiles[4] = Tile {
+			tile: TileType::Landmark(Landmark::ShrineIdol),
+			..default()
+		};
+
+		for (pos, tile) in map.into_tiles() {
+			cmd.spawn(tile.into_bundle(pos, &*assets));
 		}
 	});
 
