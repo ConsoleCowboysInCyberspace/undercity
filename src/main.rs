@@ -34,8 +34,8 @@ fn isotransform_update_system(
 ) {
 	for (ent, mut transform, isoTransform) in query.iter_mut() {
 		let (ix, iy) = (isoTransform.pos * isoTransform.scale).into();
-		let pos = vec2(iy - ix, (iy + ix) / 2.0);
-		transform.translation = (pos, 10_000.0 - pos.y).into();
+		let pos = vec2(ix + iy, (ix - iy) / 2.0);
+		transform.translation = (pos, 500_000.0 - pos.y).into();
 	}
 }
 
@@ -55,9 +55,9 @@ fn main() {
 	app.add_system(isotransform_update_system);
 	app.add_startup_system(|mut cmd: Commands, assets: ResMut<AssetServer>| {
 		cmd.spawn(Camera2dBundle {
-			transform: Transform::from_xyz(0.0, 0.0, 10_000.0),
+			transform: Transform::from_xyz(0.0, 0.0, 1_000_000.0),
 			projection: OrthographicProjection {
-				far: 20_000.0,
+				far: 1_000_000.0,
 				..default()
 			},
 			..default()
