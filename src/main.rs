@@ -42,7 +42,14 @@ fn isotransform_update_system(
 fn main() {
 	let mut app = App::new();
 
-	app.add_plugins(DefaultPlugins);
+	app.add_plugins(DefaultPlugins.set(WindowPlugin {
+		primary_window: Some(Window {
+			title: "The Undercity".into(),
+			resolution: (1920.0, 1080.0).into(),
+			..default()
+		}),
+		..default()
+	}));
 
 	app.add_system(close_on_esc);
 	app.add_system(isotransform_update_system);
