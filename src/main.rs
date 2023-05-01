@@ -9,7 +9,8 @@ use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
-use rand::Rng;
+use rand::seq::SliceRandom;
+use rand::{thread_rng, Rng};
 
 #[derive(Clone, Copy, Debug, Component)]
 pub struct IsoTransform {
@@ -64,43 +65,40 @@ fn main() {
 		});
 
 		use map::*;
-		let mut map = Map::new(UVec2::splat(32));
+		let mut map = Map::new();
 
-		#[cfg(none)]
-		for y in 0 .. map.size.y {
-			for x in 0 .. map.size.x {
-				let edge = y == 0 || x == 0 || y == map.size.y - 1 || x == map.size.x - 1;
-				let tile = if edge {
-					Tile::WallSolid
-				} else {
-					let interior = y > 1 && y < map.size.y - 2 && x > 1 && x < map.size.x - 2;
-					if interior {
-						Tile::Random
+		let wall = Tile {
+			ty: TileType::Wall(WallShape::Solid),
+			tileset: Tileset::Cocutos,
+		};
+		for y in -4 .. 5 {
+			for x in [-4, 4] {
+				map[(x, y)] = wall;
+			}
+		}
+		for x in -4 .. 5 {
+			for y in [-4, 4] {
+				map[(x, y)] = wall;
+			}
+		}
+		for y in -3 .. 4 {
+			for x in -3 .. 4 {
+				let lava = (-1 ..= 1);
+				map[(x, y)] = Tile {
+					ty: TileType::Floor(if x == 0 && y == 0 {
+						FloorType::LavaBlue
+					} else if lava.contains(&x) && lava.contains(&y) {
+						FloorType::LavaRed
 					} else {
-						Tile::Floor
-					}
+						FloorType::Tileset
+					}),
+					tileset: wall.tileset,
 				};
-
-				let index = y * map.size.x + x;
-				map.tiles[index as usize] = tile;
 			}
 		}
 
-		map.tiles[0] = Tile {
-			tile: TileType::Floor(FloorType::Tileset),
-			..default()
-		};
-		map.tiles[2] = Tile {
-			tile: TileType::Floor(FloorType::LavaBlue),
-			..default()
-		};
-		map.tiles[4] = Tile {
-			tile: TileType::Landmark(Landmark::ShrineIdol),
-			..default()
-		};
-
 		for (pos, tile) in map.into_tiles() {
-			cmd.spawn(tile.into_bundle(pos, &*assets));
+			cmd.spawn(tile.into_bundle(pos.as_vec2(), &*assets));
 		}
 	});
 
