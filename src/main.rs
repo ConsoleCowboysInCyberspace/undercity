@@ -12,6 +12,9 @@ use bevy::window::close_on_esc;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
+#[linkme::distributed_slice]
+pub static setupApp: [fn(&mut App)] = [..];
+
 #[derive(Clone, Copy, Debug, Component)]
 pub struct IsoTransform {
 	pos: Vec2,
@@ -51,6 +54,10 @@ fn main() {
 		}),
 		..default()
 	}));
+
+	for func in setupApp {
+		func(&mut app);
+	}
 
 	app.add_system(close_on_esc);
 	app.add_system(isotransform_update_system);
