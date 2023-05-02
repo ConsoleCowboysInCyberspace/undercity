@@ -73,18 +73,18 @@ fn main() {
 		};
 		for y in -4 .. 5 {
 			for x in [-4, 4] {
-				map[(x, y)] = wall;
+				map[(x, y)].set(wall);
 			}
 		}
 		for x in -4 .. 5 {
 			for y in [-4, 4] {
-				map[(x, y)] = wall;
+				map[(x, y)].set(wall);
 			}
 		}
 		for y in -3 .. 4 {
 			for x in -3 .. 4 {
 				let lava = (-1 ..= 1);
-				map[(x, y)] = Tile {
+				map[(x, y)].set(Tile {
 					ty: TileType::Floor(if x == 0 && y == 0 {
 						FloorType::LavaBlue
 					} else if lava.contains(&x) && lava.contains(&y) {
@@ -93,13 +93,11 @@ fn main() {
 						FloorType::Tileset
 					}),
 					tileset: wall.tileset,
-				};
+				});
 			}
 		}
 
-		for (pos, tile) in map.into_tiles() {
-			cmd.spawn(tile.into_bundle(pos.as_vec2(), &*assets));
-		}
+		map.into_entities(&mut cmd, &assets);
 	});
 
 	app.add_system(

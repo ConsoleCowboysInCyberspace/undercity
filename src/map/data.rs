@@ -1,6 +1,8 @@
 use std::ops::{Deref, DerefMut};
 
-use bevy::math::{IVec2, ivec2};
+use bevy::math::{ivec2, IVec2};
+
+use crate::IsoTransform;
 
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(u8)]

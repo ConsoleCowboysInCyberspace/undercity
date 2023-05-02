@@ -6,8 +6,8 @@ use bevy::math::{ivec2, uvec2, vec2};
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::IsoTransform;
 pub use self::data::*;
+use crate::IsoTransform;
 
 pub mod data;
 
@@ -29,6 +29,10 @@ pub struct Tile {
 }
 
 impl Tile {
+	pub fn is_empty(&self) -> bool {
+		matches!(self.ty, TileType::Empty)
+	}
+
 	pub fn texture_info(&self) -> (&'static str, Rect, bool) {
 		let (texture, flip, index) = match self.ty {
 			TileType::Empty => unimplemented!("Should never convert empty tiles into tile bundle"),
@@ -83,9 +87,63 @@ impl Tile {
 	}
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct TilePair {
+	pub foreground: Tile,
+	pub background: Tile,
+}
+
+impl TilePair {
+	pub fn is_empty(&self) -> bool {
+		self.foreground.is_empty() && self.background.is_empty()
+	}
+
+	pub fn set(&mut self, tile: Tile) {
+		self.set_with_floor(tile, FloorType::Tileset)
+	}
+
+	pub fn set_with_floor(&mut self, tile: Tile, floor: FloorType) {
+		self.foreground = tile;
+		self.background = Tile {
+			ty: TileType::Floor(floor),
+			tileset: tile.tileset,
+		};
+	}
+
+	pub fn into_entity(self, pos: TilePos, cmd: &mut Commands, assets: &AssetServer) -> Entity {
+		debug_assert!(!self.is_empty(), "Attempting to spawn empty TilePair");
+
+		let Self {
+			foreground,
+			background,
+		} = self;
+		let pos = pos.as_vec2();
+		let mut foreground = if foreground.is_empty() {
+			cmd.spawn(IsoTransform {
+				pos,
+				scale: tileRadius,
+			})
+		} else {
+			cmd.spawn(foreground.into_bundle(pos, assets))
+		};
+
+		if !background.is_empty() {
+			let background = background.into_bundle(pos, assets);
+			foreground.with_children(|b| {
+				b.spawn(SpriteBundle {
+					transform: Transform::from_xyz(0.0, 0.0, -0.5),
+					..background.sprite
+				});
+			});
+		}
+
+		foreground.id()
+	}
+}
+
 #[derive(Clone)]
 pub struct Chunk {
-	pub tiles: [Tile; Self::diameterTiles.pow(2)],
+	pub tiles: [TilePair; Self::diameterTiles.pow(2)],
 }
 
 impl Chunk {
@@ -120,8 +178,9 @@ impl Map {
 		}
 	}
 
-	pub fn into_tiles(self) -> impl Iterator<Item = (TilePos, Tile)> {
-		self.chunks
+	pub fn into_entities(self, cmd: &mut Commands, assets: &AssetServer) {
+		let tiles = self
+			.chunks
 			.into_iter()
 			.flat_map(|(pos, chunk)| {
 				(0 .. Chunk::diameterTiles as i32).flat_map(move |y| {
@@ -132,12 +191,15 @@ impl Map {
 					})
 				})
 			})
-			.filter(|(_, tile)| !matches!(tile.ty, TileType::Empty))
+			.filter(|(_, pair)| !pair.is_empty());
+		for (pos, tile) in tiles {
+			tile.into_entity(pos, cmd, assets);
+		}
 	}
 }
 
 impl Index<TilePos> for Map {
-	type Output = Tile;
+	type Output = TilePair;
 
 	fn index(&self, index: TilePos) -> &Self::Output {
 		let chunk = index.into();
@@ -160,7 +222,7 @@ impl IndexMut<TilePos> for Map {
 }
 
 impl Index<(i32, i32)> for Map {
-	type Output = Tile;
+	type Output = TilePair;
 
 	fn index(&self, (x, y): (i32, i32)) -> &Self::Output {
 		&self[TilePos::of(x, y)]
