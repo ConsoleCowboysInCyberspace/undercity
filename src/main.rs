@@ -1,5 +1,6 @@
 #![allow(unused, non_snake_case, non_upper_case_globals)]
 
+pub mod entities;
 pub mod map;
 
 use std::ops::Deref;
@@ -62,15 +63,6 @@ fn main() {
 	app.add_system(close_on_esc);
 	app.add_system(isotransform_update_system);
 	app.add_startup_system(|mut cmd: Commands, assets: ResMut<AssetServer>| {
-		cmd.spawn(Camera2dBundle {
-			transform: Transform::from_xyz(0.0, 0.0, 1_000_000.0),
-			projection: OrthographicProjection {
-				far: 1_000_000.0,
-				..default()
-			},
-			..default()
-		});
-
 		use map::*;
 		let mut map = Map::new();
 
@@ -106,30 +98,6 @@ fn main() {
 
 		map.into_entities(&mut cmd, &assets);
 	});
-
-	app.add_system(
-		|mut query: Query<&mut Transform, With<Camera2d>>,
-		 time: Res<Time>,
-		 keyboard: Res<Input<KeyCode>>| {
-			let mut vel = Vec2::ZERO;
-			if keyboard.pressed(KeyCode::W) {
-				vel.y += 1.0;
-			}
-			if keyboard.pressed(KeyCode::S) {
-				vel.y -= 1.0;
-			}
-			if keyboard.pressed(KeyCode::A) {
-				vel.x -= 1.0;
-			}
-			if keyboard.pressed(KeyCode::D) {
-				vel.x += 1.0;
-			}
-
-			let mut transform = query.single_mut();
-			transform.translation +=
-				Vec3::from((vel.normalize_or_zero() * 250.0 * time.delta_seconds(), 0.0));
-		},
-	);
 
 	app.run();
 }

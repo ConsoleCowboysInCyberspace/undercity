@@ -1,3 +1,5 @@
+pub mod data;
+
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
@@ -8,8 +10,6 @@ use rand::{thread_rng, Rng};
 
 pub use self::data::*;
 use crate::IsoTransform;
-
-pub mod data;
 
 pub const tileDiameter: f32 = 64.0;
 pub const tileRadius: f32 = tileDiameter / 2.0;
