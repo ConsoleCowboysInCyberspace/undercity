@@ -98,16 +98,33 @@ impl TilePair {
 		self.foreground.is_empty() && self.background.is_empty()
 	}
 
+	/// Set foreground or background depending on type of `tile`. Clears
+	/// foreground if setting a floor.
 	pub fn set(&mut self, tile: Tile) {
-		self.set_with_floor(tile, FloorType::Tileset)
+		if matches!(tile.ty, TileType::Floor(_)) {
+			self.foreground.ty = TileType::Empty;
+			self.background = tile;
+		} else {
+			self.set_with_floor(tile, FloorType::Tileset);
+		}
 	}
 
+	/// Set a wall tile with a custom floor type in its background.
 	pub fn set_with_floor(&mut self, tile: Tile, floor: FloorType) {
+		debug_assert!(
+			!matches!(tile.ty, TileType::Floor(_)),
+			"TilePair::set_with_floor expects a wall tile"
+		);
 		self.foreground = tile;
 		self.background = Tile {
 			ty: TileType::Floor(floor),
 			tileset: tile.tileset,
 		};
+	}
+
+	pub fn clear(&mut self) {
+		self.foreground.ty = TileType::Empty;
+		self.background.ty = TileType::Empty;
 	}
 
 	pub fn into_entity(self, pos: TilePos, cmd: &mut Commands, assets: &AssetServer) -> Entity {

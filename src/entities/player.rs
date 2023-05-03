@@ -1,7 +1,9 @@
-use bevy::{prelude::*, math::vec2};
+use bevy::math::vec2;
+use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::{IsoTransform, isotransform_update_system, map::tileDiameter};
+use crate::map::tileDiameter;
+use crate::{isotransform_update_system, IsoTransform};
 
 pub const depthRange: f32 = 1_000_000.0;
 
