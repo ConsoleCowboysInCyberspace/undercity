@@ -136,10 +136,14 @@ impl TilePair {
 		} = self;
 		let pos = pos.as_vec2();
 		let mut foreground = if foreground.is_empty() {
-			cmd.spawn(IsoTransform {
-				pos,
-				scale: tileRadius,
-			})
+			cmd.spawn((
+				IsoTransform {
+					pos,
+					scale: tileRadius,
+				},
+				TransformBundle::default(),
+				VisibilityBundle::default(),
+			))
 		} else {
 			cmd.spawn(foreground.into_bundle(pos, assets))
 		};
@@ -148,7 +152,8 @@ impl TilePair {
 			let background = background.into_bundle(pos, assets);
 			foreground.with_children(|b| {
 				b.spawn(SpriteBundle {
-					transform: Transform::from_xyz(0.0, 0.0, -0.5),
+					// ensures players, mobs, etc. render over background
+					transform: Transform::from_xyz(0.0, 0.0, -tileDiameter),
 					..background.sprite
 				});
 			});
