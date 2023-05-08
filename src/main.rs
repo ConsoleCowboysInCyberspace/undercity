@@ -5,9 +5,11 @@ pub mod map;
 
 use std::ops::Deref;
 
-use bevy::math::{uvec2, vec2};
+use bevy::math::{uvec2, vec2, Vec3Swizzles};
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::{Extract, RenderApp};
+use bevy::sprite::{ExtractedSprite, ExtractedSprites};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
 use rand::seq::SliceRandom;
@@ -18,29 +20,61 @@ pub static setupApp: [fn(&mut App)] = [..];
 
 #[derive(Clone, Copy, Debug, Component)]
 pub struct IsoTransform {
-	pos: Vec2,
 	scale: f32,
 }
 
 impl Default for IsoTransform {
 	fn default() -> Self {
-		Self {
-			pos: Vec2::ZERO,
-			scale: 1.0,
-		}
+		Self { scale: 1.0 }
 	}
 }
 
-fn isotransform_update_system(
-	mut query: Query<
-		(Entity, &mut Transform, &IsoTransform),
-		Or<(Added<IsoTransform>, Changed<IsoTransform>)>,
-	>,
+#[derive(Clone, Debug, Default, Component)]
+pub struct IsoSprite {
+	pub texture: Handle<Image>,
+	pub rect: Rect,
+	pub flip: bool,
+}
+
+#[derive(Debug, Default, Bundle)]
+pub struct IsoSpriteBundle {
+	pub sprite: IsoSprite,
+
+	pub isoTransform: IsoTransform,
+
+	#[bundle]
+	pub transform: TransformBundle,
+
+	#[bundle]
+	pub visibility: VisibilityBundle,
+}
+
+pub fn iso_pos(pos: Vec2, scale: f32) -> Vec3 {
+	let (ix, iy) = (pos * scale).into();
+	let pos = vec2(ix + iy, (ix - iy) / 2.0);
+	(pos, 500_000.0 - pos.y).into()
+}
+
+pub fn isosprite_extract(
+	mut query: Extract<Query<(Entity, &GlobalTransform, &IsoTransform, &IsoSprite)>>,
+	mut extractedSprites: ResMut<ExtractedSprites>,
 ) {
-	for (ent, mut transform, isoTransform) in query.iter_mut() {
-		let (ix, iy) = (isoTransform.pos * isoTransform.scale).into();
-		let pos = vec2(ix + iy, (ix - iy) / 2.0);
-		transform.translation = (pos, 500_000.0 - pos.y).into();
+	for (entity, transform, itransform, sprite) in query.iter() {
+		let mut affine = transform.affine();
+		let mut isoPos = iso_pos(affine.translation.xy(), itransform.scale);
+		isoPos.z += affine.translation.z;
+		affine.translation = isoPos.into();
+		extractedSprites.sprites.push(ExtractedSprite {
+			entity,
+			transform: GlobalTransform::from(affine),
+			color: Color::WHITE,
+			rect: Some(sprite.rect),
+			custom_size: None,
+			image_handle_id: sprite.texture.id(),
+			flip_x: sprite.flip,
+			flip_y: false,
+			anchor: Vec2::ZERO, // center
+		});
 	}
 }
 
@@ -60,8 +94,11 @@ fn main() {
 		func(&mut app);
 	}
 
+	app.sub_app_mut(RenderApp)
+		.add_system(isosprite_extract.in_schedule(ExtractSchedule));
+
 	app.add_system(close_on_esc);
-	app.add_system(isotransform_update_system);
+	// app.add_system(isotransform_update_system);
 	app.add_startup_system(|mut cmd: Commands, assets: ResMut<AssetServer>| {
 		use map::*;
 		let mut map = Map::new();

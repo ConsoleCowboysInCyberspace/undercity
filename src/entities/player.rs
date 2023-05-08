@@ -1,9 +1,9 @@
-use bevy::math::vec2;
+use bevy::math::{vec2, Vec3Swizzles};
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::map::tileDiameter;
-use crate::{isotransform_update_system, IsoTransform};
+use crate::{iso_pos, IsoSprite, IsoSpriteBundle, IsoTransform};
 
 pub const depthRange: f32 = 1_000_000.0;
 
@@ -14,26 +14,22 @@ struct Player;
 fn setup_app(app: &mut App) {
 	app.add_startup_system(startup);
 	app.add_system(move_player);
-	// camera needs to be set to player's updated position
-	app.add_system(move_camera.after(isotransform_update_system));
+	app.add_system(move_camera.after(move_player));
 }
 
 fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 	let spritePos = vec2(256.0, 448.0);
 	cmd.spawn((
 		Player,
-		IsoTransform {
-			pos: vec2(0.0, 0.0),
-			scale: 1.0,
-		},
-		SpriteBundle {
-			texture: assets.load("tiles/misc.png"),
-			sprite: Sprite {
-				rect: Some(Rect {
+		IsoSpriteBundle {
+			isoTransform: IsoTransform { scale: 1.0 },
+			sprite: IsoSprite {
+				texture: assets.load("tiles/misc.png"),
+				rect: Rect {
 					min: spritePos,
 					max: spritePos + 64.0,
-				}),
-				..default()
+				},
+				flip: false,
 			},
 			..default()
 		},
@@ -48,7 +44,7 @@ fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 }
 
 fn move_player(
-	mut playerQuery: Query<(&mut IsoTransform, &mut Sprite), With<Player>>,
+	mut playerQuery: Query<(&mut Transform, &mut IsoSprite), With<Player>>,
 	time: Res<Time>,
 	keyboard: Res<Input<KeyCode>>,
 	mut lastRngFlip: Local<f64>,
@@ -69,13 +65,14 @@ fn move_player(
 	vel = vel.normalize_or_zero();
 
 	let (mut transform, mut sprite) = playerQuery.single_mut();
-	transform.pos += vel.normalize_or_zero() * tileDiameter * time.delta_seconds();
+	let displacement = vel.normalize_or_zero() * tileDiameter * time.delta_seconds();
+	transform.translation += Vec3::from((displacement, 0.0));
 
 	// flip sprite to match movement direction
 	if vel.length_squared() > 0.0 {
 		let ne = vel.dot(vec2(-1.0, -1.0));
 		let sw = vel.dot(vec2(1.0, 1.0));
-		sprite.flip_x = if ne > 0.0 {
+		sprite.flip = if ne > 0.0 {
 			false
 		} else if sw > 0.0 {
 			true
@@ -87,7 +84,7 @@ fn move_player(
 				*lastRngFlip = now;
 				thread_rng().gen_bool(0.5)
 			} else {
-				sprite.flip_x
+				sprite.flip
 			}
 		};
 	}
@@ -97,7 +94,7 @@ fn move_camera(
 	mut playerQuery: Query<&Transform, With<Player>>,
 	mut cameraQuery: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
 ) {
-	let mut pos = playerQuery.single().translation;
+	let mut pos = iso_pos(playerQuery.single().translation.xy(), 1.0);
 	pos.z = depthRange;
 	cameraQuery.single_mut().translation = pos;
 }

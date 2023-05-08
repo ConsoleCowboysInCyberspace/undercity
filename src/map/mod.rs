@@ -9,18 +9,10 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 pub use self::data::*;
-use crate::IsoTransform;
+use crate::{IsoSprite, IsoSpriteBundle, IsoTransform};
 
 pub const tileDiameter: f32 = 64.0;
 pub const tileRadius: f32 = tileDiameter / 2.0;
-
-#[derive(Clone, Bundle)]
-pub struct TileBundle {
-	pub isoTransform: IsoTransform,
-
-	#[bundle]
-	pub sprite: SpriteBundle,
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Tile {
@@ -64,25 +56,20 @@ impl Tile {
 		)
 	}
 
-	pub fn into_bundle(self, pos: Vec2, assets: &AssetServer) -> TileBundle {
+	pub fn into_bundle(self, pos: Vec2, assets: &AssetServer) -> IsoSpriteBundle {
 		let (texture, rect, flip) = self.texture_info();
 		let texture = assets.load(texture);
-		let rect = Some(rect);
 
-		TileBundle {
-			isoTransform: IsoTransform {
-				pos,
-				scale: tileRadius,
-			},
-			sprite: SpriteBundle {
+		IsoSpriteBundle {
+			isoTransform: IsoTransform { scale: tileRadius },
+			sprite: IsoSprite {
 				texture,
-				sprite: Sprite {
-					rect,
-					flip_x: flip,
-					..default()
-				},
+				rect,
+				flip,
 				..default()
 			},
+			transform: Transform::from_translation((pos, 0.0).into()).into(),
+			..default()
 		}
 	}
 }
@@ -137,11 +124,8 @@ impl TilePair {
 		let pos = pos.as_vec2();
 		let mut foreground = if foreground.is_empty() {
 			cmd.spawn((
-				IsoTransform {
-					pos,
-					scale: tileRadius,
-				},
-				TransformBundle::default(),
+				IsoTransform { scale: tileRadius },
+				TransformBundle::from(Transform::from_translation((pos, 0.0).into())),
 				VisibilityBundle::default(),
 			))
 		} else {
@@ -151,10 +135,10 @@ impl TilePair {
 		if !background.is_empty() {
 			let background = background.into_bundle(pos, assets);
 			foreground.with_children(|b| {
-				b.spawn(SpriteBundle {
+				b.spawn(IsoSpriteBundle {
 					// ensures players, mobs, etc. render over background
-					transform: Transform::from_xyz(0.0, 0.0, -tileDiameter),
-					..background.sprite
+					transform: Transform::from_xyz(0.0, 0.0, -tileDiameter).into(),
+					..background
 				});
 			});
 		}
