@@ -6,6 +6,7 @@ use std::ops::{Deref, DerefMut, Index, IndexMut};
 
 use bevy::math::{ivec2, uvec2, vec2};
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use rand::{thread_rng, Rng};
 
 pub use self::data::*;
@@ -56,20 +57,31 @@ impl Tile {
 		)
 	}
 
-	pub fn into_bundle(self, pos: Vec2, assets: &AssetServer) -> IsoSpriteBundle {
+	pub fn into_bundle(
+		self,
+		pos: Vec2,
+		assets: &AssetServer,
+	) -> (IsoSpriteBundle, Option<Collider>) {
 		let (texture, rect, flip) = self.texture_info();
 		let texture = assets.load(texture);
+		let collider = match self.ty {
+			TileType::Wall(shape) => Some(shape.collider()),
+			_ => None,
+		};
 
-		IsoSpriteBundle {
-			sprite: IsoSprite {
-				texture,
-				rect,
-				flip,
+		(
+			IsoSpriteBundle {
+				sprite: IsoSprite {
+					texture,
+					rect,
+					flip,
+					..default()
+				},
+				transform: Transform::from_translation((pos * tileRadius, 0.0).into()).into(),
 				..default()
 			},
-			transform: Transform::from_translation((pos * tileRadius, 0.0).into()).into(),
-			..default()
-		}
+			collider,
+		)
 	}
 }
 
@@ -127,11 +139,17 @@ impl TilePair {
 				VisibilityBundle::default(),
 			))
 		} else {
-			cmd.spawn(foreground.into_bundle(pos, assets))
+			let (foreground, collider) = foreground.into_bundle(pos, assets);
+			let mut ent = cmd.spawn(foreground);
+			if let Some(c) = collider {
+				ent.insert((c, ColliderDebugColor(Color::RED), RigidBody::Fixed));
+			}
+			ent
 		};
 
 		if !background.is_empty() {
-			let background = background.into_bundle(pos, assets);
+			let (background, _) = background.into_bundle(pos, assets);
+			// FIXME: eventually floors will sometimes have colliders, e.g. lava
 			foreground.with_children(|b| {
 				b.spawn(IsoSpriteBundle {
 					// ensures players, mobs, etc. render over background

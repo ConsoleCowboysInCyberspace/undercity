@@ -5,13 +5,16 @@ pub mod map;
 
 use std::ops::Deref;
 
-use bevy::math::{uvec2, vec2, Vec3Swizzles};
+use bevy::math::{uvec2, vec2, vec3, Affine3A, Vec3Swizzles};
 use bevy::prelude::*;
+use bevy::render::extract_component::ExtractComponent;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::render::{Extract, RenderApp};
+use bevy::render::{Extract, RenderApp, RenderSet};
 use bevy::sprite::{ExtractedSprite, ExtractedSprites};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
+use bevy_rapier2d::prelude::RapierPhysicsPlugin;
+use bevy_rapier2d::render::RapierDebugRenderPlugin;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
@@ -55,7 +58,7 @@ pub fn isosprite_extract(
 		affine.translation = isoPos.into();
 		extractedSprites.sprites.push(ExtractedSprite {
 			entity,
-			transform: GlobalTransform::from(affine),
+			transform: affine.into(),
 			color: Color::WHITE,
 			rect: Some(sprite.rect),
 			custom_size: None,
@@ -78,6 +81,10 @@ fn main() {
 		}),
 		..default()
 	}));
+	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
+		crate::map::tileDiameter,
+	));
+	app.add_plugin(RapierDebugRenderPlugin::default().always_on_top());
 
 	for func in setupApp {
 		func(&mut app);
@@ -87,7 +94,6 @@ fn main() {
 		.add_system(isosprite_extract.in_schedule(ExtractSchedule));
 
 	app.add_system(close_on_esc);
-	// app.add_system(isotransform_update_system);
 	app.add_startup_system(|mut cmd: Commands, assets: ResMut<AssetServer>| {
 		use map::*;
 		let mut map = Map::new();
@@ -121,6 +127,36 @@ fn main() {
 				});
 			}
 		}
+
+		map[(0, 0)].set(Tile {
+			ty: TileType::Wall(WallShape::Pillar),
+			tileset: Tileset::Lapis,
+		});
+
+		map[(-1, -10)].set(Tile {
+			ty: TileType::Wall(WallShape::Eastwest),
+			tileset: Tileset::Gallery,
+		});
+		map[(0, -10)].set(Tile {
+			ty: TileType::DoorEW { open: true },
+			tileset: Tileset::Gallery,
+		});
+		map[(1, -10)].set(Tile {
+			ty: TileType::Wall(WallShape::Eastwest),
+			tileset: Tileset::Gallery,
+		});
+		map[(-10, -1)].set(Tile {
+			ty: TileType::Wall(WallShape::Northsouth),
+			tileset: Tileset::Gallery,
+		});
+		map[(-10, 0)].set(Tile {
+			ty: TileType::DoorNS { open: true },
+			tileset: Tileset::Gallery,
+		});
+		map[(-10, 1)].set(Tile {
+			ty: TileType::Wall(WallShape::Northsouth),
+			tileset: Tileset::Gallery,
+		});
 
 		map.into_entities(&mut cmd, &assets);
 	});

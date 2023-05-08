@@ -1,8 +1,9 @@
 use bevy::math::{vec2, Vec3Swizzles};
 use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::map::tileDiameter;
+use crate::map::{tileDiameter, tileRadius};
 use crate::{iso_pos, IsoSprite, IsoSpriteBundle};
 
 pub const depthRange: f32 = 1_000_000.0;
@@ -30,6 +31,18 @@ fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 				},
 				flip: false,
 			},
+			// FIXME: mapgen needs to set this
+			transform: Transform::from_translation(
+				(vec2(2.0, -2.0) * crate::map::tileRadius, 0.0).into(),
+			)
+			.into(),
+			..default()
+		},
+		Collider::ball(tileRadius / 4.0),
+		ColliderDebugColor(Color::YELLOW),
+		KinematicCharacterController {
+			autostep: None,
+			snap_to_ground: None,
 			..default()
 		},
 	));
@@ -43,7 +56,7 @@ fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 }
 
 fn move_player(
-	mut playerQuery: Query<(&mut Transform, &mut IsoSprite), With<Player>>,
+	mut playerQuery: Query<(&mut KinematicCharacterController, &mut IsoSprite), With<Player>>,
 	time: Res<Time>,
 	keyboard: Res<Input<KeyCode>>,
 	mut lastRngFlip: Local<f64>,
@@ -63,9 +76,9 @@ fn move_player(
 	}
 	vel = vel.normalize_or_zero();
 
-	let (mut transform, mut sprite) = playerQuery.single_mut();
+	let (mut controller, mut sprite) = playerQuery.single_mut();
 	let displacement = vel.normalize_or_zero() * tileDiameter * time.delta_seconds();
-	transform.translation += Vec3::from((displacement, 0.0));
+	controller.translation = Some(displacement);
 
 	// flip sprite to match movement direction
 	if vel.length_squared() > 0.0 {
