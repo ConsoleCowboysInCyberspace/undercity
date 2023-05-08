@@ -15,19 +15,10 @@ use bevy::window::close_on_esc;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
+use self::entities::player::depthRange;
+
 #[linkme::distributed_slice]
 pub static setupApp: [fn(&mut App)] = [..];
-
-#[derive(Clone, Copy, Debug, Component)]
-pub struct IsoTransform {
-	scale: f32,
-}
-
-impl Default for IsoTransform {
-	fn default() -> Self {
-		Self { scale: 1.0 }
-	}
-}
 
 #[derive(Clone, Debug, Default, Component)]
 pub struct IsoSprite {
@@ -40,8 +31,6 @@ pub struct IsoSprite {
 pub struct IsoSpriteBundle {
 	pub sprite: IsoSprite,
 
-	pub isoTransform: IsoTransform,
-
 	#[bundle]
 	pub transform: TransformBundle,
 
@@ -49,19 +38,19 @@ pub struct IsoSpriteBundle {
 	pub visibility: VisibilityBundle,
 }
 
-pub fn iso_pos(pos: Vec2, scale: f32) -> Vec3 {
-	let (ix, iy) = (pos * scale).into();
+pub fn iso_pos(pos: Vec2) -> Vec3 {
+	let (ix, iy) = pos.into();
 	let pos = vec2(ix + iy, (ix - iy) / 2.0);
-	(pos, 500_000.0 - pos.y).into()
+	(pos, depthRange / 2.0 - pos.y).into()
 }
 
 pub fn isosprite_extract(
-	mut query: Extract<Query<(Entity, &GlobalTransform, &IsoTransform, &IsoSprite)>>,
+	mut query: Extract<Query<(Entity, &GlobalTransform, &IsoSprite)>>,
 	mut extractedSprites: ResMut<ExtractedSprites>,
 ) {
-	for (entity, transform, itransform, sprite) in query.iter() {
+	for (entity, transform, sprite) in query.iter() {
 		let mut affine = transform.affine();
-		let mut isoPos = iso_pos(affine.translation.xy(), itransform.scale);
+		let mut isoPos = iso_pos(affine.translation.xy());
 		isoPos.z += affine.translation.z;
 		affine.translation = isoPos.into();
 		extractedSprites.sprites.push(ExtractedSprite {

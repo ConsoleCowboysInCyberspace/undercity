@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::map::tileDiameter;
-use crate::{iso_pos, IsoSprite, IsoSpriteBundle, IsoTransform};
+use crate::{iso_pos, IsoSprite, IsoSpriteBundle};
 
 pub const depthRange: f32 = 1_000_000.0;
 
@@ -22,7 +22,6 @@ fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 	cmd.spawn((
 		Player,
 		IsoSpriteBundle {
-			isoTransform: IsoTransform { scale: 1.0 },
 			sprite: IsoSprite {
 				texture: assets.load("tiles/misc.png"),
 				rect: Rect {
@@ -94,7 +93,7 @@ fn move_camera(
 	mut playerQuery: Query<&Transform, With<Player>>,
 	mut cameraQuery: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
 ) {
-	let mut pos = iso_pos(playerQuery.single().translation.xy(), 1.0);
+	let mut pos = iso_pos(playerQuery.single().translation.xy());
 	pos.z = depthRange;
 	cameraQuery.single_mut().translation = pos;
 }

@@ -9,7 +9,7 @@ use bevy::prelude::*;
 use rand::{thread_rng, Rng};
 
 pub use self::data::*;
-use crate::{IsoSprite, IsoSpriteBundle, IsoTransform};
+use crate::{IsoSprite, IsoSpriteBundle};
 
 pub const tileDiameter: f32 = 64.0;
 pub const tileRadius: f32 = tileDiameter / 2.0;
@@ -61,14 +61,13 @@ impl Tile {
 		let texture = assets.load(texture);
 
 		IsoSpriteBundle {
-			isoTransform: IsoTransform { scale: tileRadius },
 			sprite: IsoSprite {
 				texture,
 				rect,
 				flip,
 				..default()
 			},
-			transform: Transform::from_translation((pos, 0.0).into()).into(),
+			transform: Transform::from_translation((pos * tileRadius, 0.0).into()).into(),
 			..default()
 		}
 	}
@@ -124,8 +123,7 @@ impl TilePair {
 		let pos = pos.as_vec2();
 		let mut foreground = if foreground.is_empty() {
 			cmd.spawn((
-				IsoTransform { scale: tileRadius },
-				TransformBundle::from(Transform::from_translation((pos, 0.0).into())),
+				TransformBundle::from(Transform::from_translation((pos * tileRadius, 0.0).into())),
 				VisibilityBundle::default(),
 			))
 		} else {
