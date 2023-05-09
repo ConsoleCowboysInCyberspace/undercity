@@ -14,7 +14,7 @@ use bevy::sprite::{ExtractedSprite, ExtractedSprites};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
 use bevy_rapier2d::prelude::RapierPhysicsPlugin;
-use bevy_rapier2d::render::RapierDebugRenderPlugin;
+use bevy_rapier2d::render::{RapierDebugRenderPlugin, DebugRenderContext};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
@@ -89,10 +89,12 @@ fn main() {
 		}),
 		..default()
 	}));
+
 	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
 		crate::map::tileDiameter,
 	));
-	app.add_plugin(RapierDebugRenderPlugin::default().always_on_top());
+	app.add_plugin(RapierDebugRenderPlugin::default().always_on_top().disabled());
+	app.add_system(toggle_rapier_debug);
 
 	for func in setupApp {
 		func(&mut app);
@@ -238,4 +240,13 @@ fn main() {
 	});
 
 	app.run();
+}
+
+fn toggle_rapier_debug(
+	keyboard: Res<Input<KeyCode>>,
+	mut ctx: ResMut<DebugRenderContext>,
+) {
+	if keyboard.just_pressed(KeyCode::F11) {
+		ctx.enabled = !ctx.enabled;
+	}
 }
