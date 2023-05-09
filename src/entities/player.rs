@@ -16,6 +16,7 @@ fn setup_app(app: &mut App) {
 	app.add_startup_system(startup);
 	app.add_system(move_player);
 	app.add_system(move_camera.after(move_player));
+	app.add_system(zoom_camera);
 }
 
 fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
@@ -109,4 +110,18 @@ fn move_camera(
 	let mut pos = iso_pos(playerQuery.single().translation.xy());
 	pos.z = depthRange;
 	cameraQuery.single_mut().translation = pos;
+}
+
+fn zoom_camera(mut query: Query<&mut OrthographicProjection, With<Camera2d>>, keyboard: Res<Input<KeyCode>>) {
+	const step: f32 = 0.1;
+
+	let add = if keyboard.just_pressed(KeyCode::Equals) {
+		-step
+	} else if keyboard.just_pressed(KeyCode::Minus) {
+		step
+	} else {
+		return;
+	};
+	let mut projection = query.single_mut();
+	projection.scale = (projection.scale.ln() + add).exp();
 }
