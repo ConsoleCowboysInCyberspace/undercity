@@ -132,6 +132,14 @@ fn main() {
 			ty: TileType::Wall(WallShape::Pillar),
 			tileset: Tileset::Lapis,
 		});
+		map[(-10, -10)].set(Tile {
+			ty: TileType::Wall(WallShape::Pillar),
+			tileset: Tileset::BrickCyan,
+		});
+		map[(-10, -11)].set(Tile {
+			ty: TileType::Wall(WallShape::Pillar),
+			tileset: Tileset::BrickCyan,
+		});
 
 		map[(-1, -10)].set(Tile {
 			ty: TileType::Wall(WallShape::Eastwest),
@@ -156,6 +164,10 @@ fn main() {
 		map[(-10, 1)].set(Tile {
 			ty: TileType::Wall(WallShape::Northsouth),
 			tileset: Tileset::Gallery,
+		});
+		map[(-4, 0)].set(Tile {
+			ty: TileType::Floor(FloorType::Tileset),
+			tileset: wall.tileset,
 		});
 
 		map.into_entities(&mut cmd, &assets);

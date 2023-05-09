@@ -3,6 +3,8 @@ use std::ops::{Deref, DerefMut};
 use bevy::math::{ivec2, IVec2};
 use bevy_rapier2d::prelude::Collider;
 
+use super::tileRadius;
+
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(u8)]
 pub enum Tileset {
@@ -92,11 +94,10 @@ pub enum WallShape {
 
 impl WallShape {
 	pub fn collider(self) -> Collider {
-		let v = super::tileRadius / 2.0;
-		return Collider::cuboid(v, v);
-		#[cfg(none)]
+		const fullRadius: f32 = tileRadius / 2.0;
+		const pillarRadius: f32 = fullRadius * 0.55;
 		match self {
-			WallShape::Pillar => todo!(),
+			WallShape::Pillar => Collider::cuboid(pillarRadius, pillarRadius),
 			WallShape::North => todo!(),
 			WallShape::East => todo!(),
 			WallShape::South => todo!(),
@@ -105,9 +106,9 @@ impl WallShape {
 			WallShape::Northwest => todo!(),
 			WallShape::Southeast => todo!(),
 			WallShape::Southwest => todo!(),
-			WallShape::Eastwest => todo!(),
-			WallShape::Northsouth => todo!(),
-			WallShape::Solid => todo!(),
+			WallShape::Eastwest => Collider::cuboid(fullRadius, pillarRadius),
+			WallShape::Northsouth => Collider::cuboid(pillarRadius, fullRadius),
+			WallShape::Solid => Collider::cuboid(fullRadius, fullRadius),
 			WallShape::SolidNorth => todo!(),
 			WallShape::SolidEast => todo!(),
 			WallShape::SolidSouth => todo!(),

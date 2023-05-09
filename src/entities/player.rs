@@ -38,7 +38,7 @@ fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 			.into(),
 			..default()
 		},
-		Collider::ball(tileRadius / 4.0),
+		Collider::ball(tileRadius / 5.0),
 		ColliderDebugColor(Color::YELLOW),
 		KinematicCharacterController {
 			autostep: None,
