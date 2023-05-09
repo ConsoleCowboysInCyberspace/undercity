@@ -61,7 +61,7 @@ impl Tile {
 		self,
 		pos: Vec2,
 		assets: &AssetServer,
-	) -> (IsoSpriteBundle, Option<Collider>) {
+	) -> (IsoSpriteBundle, Option<PositionedCollider>) {
 		let (texture, rect, flip) = self.texture_info();
 		let texture = assets.load(texture);
 		let collider = match self.ty {
@@ -142,14 +142,14 @@ impl TilePair {
 			let (foreground, collider) = foreground.into_bundle(pos, assets);
 			let mut ent = cmd.spawn(foreground);
 			if let Some(c) = collider {
-				ent.insert((c, ColliderDebugColor(Color::RED), RigidBody::Fixed));
+				c.insert_into(&mut ent);
 			}
 			ent
 		};
 
 		if !background.is_empty() {
 			let (background, _) = background.into_bundle(pos, assets);
-			// FIXME: eventually floors will sometimes have colliders, e.g. lava
+			// FIXME: eventually floors will sometimes have (sensor) colliders, e.g. lava
 			foreground.with_children(|b| {
 				b.spawn(IsoSpriteBundle {
 					// ensures players, mobs, etc. render over background

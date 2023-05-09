@@ -5,7 +5,7 @@ pub mod map;
 
 use std::ops::Deref;
 
-use bevy::math::{uvec2, vec2, vec3, Affine3A, Vec3Swizzles};
+use bevy::math::{ivec2, uvec2, vec2, vec3, Affine3A, Vec3Swizzles};
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponent;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -50,6 +50,8 @@ pub fn iso_pos(pos: Vec2) -> Vec3 {
 pub fn isosprite_extract(
 	mut query: Extract<Query<(Entity, &GlobalTransform, &IsoSprite)>>,
 	mut extractedSprites: ResMut<ExtractedSprites>,
+	time: Res<Time>,
+	mut last: Local<f32>,
 ) {
 	for (entity, transform, sprite) in query.iter() {
 		let mut affine = transform.affine();
@@ -67,6 +69,12 @@ pub fn isosprite_extract(
 			flip_y: false,
 			anchor: Vec2::ZERO, // center
 		});
+	}
+
+	let now = time.elapsed_seconds();
+	if now - *last > 1.0 {
+		*last = now;
+		eprintln!("{} sprites", extractedSprites.sprites.len());
 	}
 }
 
@@ -123,7 +131,7 @@ fn main() {
 					} else {
 						FloorType::Tileset
 					}),
-					tileset: wall.tileset,
+					..wall
 				});
 			}
 		}
@@ -132,42 +140,98 @@ fn main() {
 			ty: TileType::Wall(WallShape::Pillar),
 			tileset: Tileset::Lapis,
 		});
-		map[(-10, -10)].set(Tile {
-			ty: TileType::Wall(WallShape::Pillar),
-			tileset: Tileset::BrickCyan,
-		});
-		map[(-10, -11)].set(Tile {
-			ty: TileType::Wall(WallShape::Pillar),
-			tileset: Tileset::BrickCyan,
+		map[(0, -4)].set(Tile {
+			ty: TileType::Floor(FloorType::Tileset),
+			..wall
 		});
 
-		map[(-1, -10)].set(Tile {
-			ty: TileType::Wall(WallShape::Eastwest),
-			tileset: Tileset::Gallery,
+		let shapes = [
+			WallShape::Pillar,
+			WallShape::North,
+			WallShape::East,
+			WallShape::South,
+			WallShape::West,
+			WallShape::Northeast,
+			WallShape::Northwest,
+			WallShape::Southeast,
+			WallShape::Southwest,
+			WallShape::Eastwest,
+			WallShape::Northsouth,
+			WallShape::Solid,
+			WallShape::SolidNorth,
+			WallShape::SolidEast,
+			WallShape::SolidSouth,
+			WallShape::SolidWest,
+		];
+		for (x, shape) in shapes.into_iter().enumerate() {
+			let x = x as i32 - (shapes.len() / 2) as i32;
+			map[(x, -8)].set(Tile {
+				ty: TileType::Wall(shape),
+				tileset: Tileset::BrickCyan,
+			});
+		}
+
+		let pos = ivec2(-10, -1);
+		let tileset = Tileset::Gehena;
+		map[TilePos::of(pos.x + 0, pos.y + 0)].set(Tile {
+			ty: TileType::Wall(WallShape::Southeast),
+			tileset,
 		});
-		map[(0, -10)].set(Tile {
-			ty: TileType::DoorEW { open: true },
-			tileset: Tileset::Gallery,
+		map[TilePos::of(pos.x + 1, pos.y + 0)].set(Tile {
+			ty: TileType::Wall(WallShape::South),
+			tileset,
 		});
-		map[(1, -10)].set(Tile {
-			ty: TileType::Wall(WallShape::Eastwest),
-			tileset: Tileset::Gallery,
+		map[TilePos::of(pos.x + 2, pos.y + 0)].set(Tile {
+			ty: TileType::Wall(WallShape::Southwest),
+			tileset,
 		});
-		map[(-10, -1)].set(Tile {
-			ty: TileType::Wall(WallShape::Northsouth),
-			tileset: Tileset::Gallery,
+		map[TilePos::of(pos.x + 0, pos.y + 1)].set(Tile {
+			ty: TileType::Wall(WallShape::East),
+			tileset,
 		});
-		map[(-10, 0)].set(Tile {
-			ty: TileType::DoorNS { open: true },
-			tileset: Tileset::Gallery,
+		map[TilePos::of(pos.x + 1, pos.y + 1)].set(Tile {
+			// ty: TileType::Wall(WallShape::Pillar),
+			ty: TileType::Wall(WallShape::Solid),
+			tileset,
 		});
-		map[(-10, 1)].set(Tile {
-			ty: TileType::Wall(WallShape::Northsouth),
-			tileset: Tileset::Gallery,
+		map[TilePos::of(pos.x + 2, pos.y + 1)].set(Tile {
+			ty: TileType::Wall(WallShape::West),
+			tileset,
 		});
-		map[(-4, 0)].set(Tile {
+		map[TilePos::of(pos.x + 0, pos.y + 2)].set(Tile {
+			ty: TileType::Wall(WallShape::Northeast),
+			tileset,
+		});
+		map[TilePos::of(pos.x + 1, pos.y + 2)].set(Tile {
+			ty: TileType::Wall(WallShape::North),
+			tileset,
+		});
+		map[TilePos::of(pos.x + 2, pos.y + 2)].set(Tile {
+			ty: TileType::Wall(WallShape::Northwest),
+			tileset,
+		});
+		let pos = pos - 1;
+		for y in (pos.y .. pos.y + 5) {
+			let mut h1;
+			let mut h2;
+			let indices: &mut dyn Iterator<Item = i32> = if y == pos.y || y == pos.y + 4 {
+				h1 = (pos.x .. pos.x + 5).into_iter();
+				&mut h1
+			} else {
+				h2 = [pos.x, pos.x + 4].into_iter();
+				&mut h2
+			};
+			for x in indices {
+				map[(x, y)].set(Tile {
+					ty: TileType::Wall(WallShape::Solid),
+					tileset,
+				});
+			}
+		}
+		#[cfg(none)]
+		map[(pos.x + 2, pos.y)].set(Tile {
 			ty: TileType::Floor(FloorType::Tileset),
-			tileset: wall.tileset,
+			tileset,
 		});
 
 		map.into_entities(&mut cmd, &assets);

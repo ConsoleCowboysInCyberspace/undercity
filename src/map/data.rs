@@ -1,7 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
-use bevy::math::{ivec2, IVec2};
-use bevy_rapier2d::prelude::Collider;
+use bevy::ecs::system::EntityCommands;
+use bevy::math::{ivec2, vec2};
+use bevy::prelude::*;
+use bevy_rapier2d::prelude::*;
 
 use super::tileRadius;
 
@@ -66,6 +68,48 @@ impl Tileset {
 	}
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct PositionedCollider {
+	pub collider: Collider,
+	pub translation: Option<Vec2>,
+}
+
+impl PositionedCollider {
+	pub fn insert_into(self, ent: &mut EntityCommands) {
+		let debugRender = ColliderDebugColor(Color::ORANGE_RED);
+		if let Some(translation) = self.translation {
+			ent.with_children(|b| {
+				b.spawn((
+					self.collider,
+					debugRender,
+					TransformBundle::from(Transform::from_translation((translation, 0.0).into())),
+				));
+			});
+		} else {
+			ent.insert((self.collider, debugRender));
+		}
+	}
+}
+
+impl From<Collider> for PositionedCollider {
+	fn from(collider: Collider) -> Self {
+		Self {
+			collider,
+			translation: None,
+		}
+	}
+}
+
+impl From<(Collider, Vec2)> for PositionedCollider {
+	fn from((collider, position): (Collider, Vec2)) -> Self {
+		let position = Some(position);
+		Self {
+			collider,
+			translation: position,
+		}
+	}
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(u8)] // tileset atlases
 pub enum WallShape {
@@ -93,26 +137,75 @@ pub enum WallShape {
 }
 
 impl WallShape {
-	pub fn collider(self) -> Collider {
+	pub fn collider(self) -> PositionedCollider {
 		const fullRadius: f32 = tileRadius / 2.0;
 		const pillarRadius: f32 = fullRadius * 0.55;
+		const divotSize: f32 = (fullRadius - pillarRadius) / 2.0;
 		match self {
-			WallShape::Pillar => Collider::cuboid(pillarRadius, pillarRadius),
-			WallShape::North => todo!(),
-			WallShape::East => todo!(),
-			WallShape::South => todo!(),
-			WallShape::West => todo!(),
-			WallShape::Northeast => todo!(),
-			WallShape::Northwest => todo!(),
-			WallShape::Southeast => todo!(),
-			WallShape::Southwest => todo!(),
-			WallShape::Eastwest => Collider::cuboid(fullRadius, pillarRadius),
-			WallShape::Northsouth => Collider::cuboid(pillarRadius, fullRadius),
-			WallShape::Solid => Collider::cuboid(fullRadius, fullRadius),
-			WallShape::SolidNorth => todo!(),
-			WallShape::SolidEast => todo!(),
-			WallShape::SolidSouth => todo!(),
-			WallShape::SolidWest => todo!(),
+			WallShape::Pillar => Collider::cuboid(pillarRadius, pillarRadius).into(),
+			WallShape::North => (
+				Collider::cuboid(pillarRadius, pillarRadius + divotSize),
+				vec2(0.0, -divotSize),
+			)
+				.into(),
+			WallShape::East => (
+				Collider::cuboid(pillarRadius + divotSize, pillarRadius),
+				vec2(divotSize, 0.0),
+			)
+				.into(),
+			WallShape::South => (
+				Collider::cuboid(pillarRadius, pillarRadius + divotSize),
+				vec2(0.0, divotSize),
+			)
+				.into(),
+			WallShape::West => (
+				Collider::cuboid(pillarRadius + divotSize, pillarRadius),
+				vec2(-divotSize, 0.0),
+			)
+				.into(),
+			WallShape::Northeast => (
+				Collider::cuboid(pillarRadius + divotSize, pillarRadius + divotSize),
+				vec2(divotSize, -divotSize),
+			)
+				.into(),
+			WallShape::Northwest => (
+				Collider::cuboid(pillarRadius + divotSize, pillarRadius + divotSize),
+				vec2(-divotSize, -divotSize),
+			)
+				.into(),
+			WallShape::Southeast => (
+				Collider::cuboid(pillarRadius + divotSize, pillarRadius + divotSize),
+				vec2(divotSize, divotSize),
+			)
+				.into(),
+			WallShape::Southwest => (
+				Collider::cuboid(pillarRadius + divotSize, pillarRadius + divotSize),
+				vec2(-divotSize, divotSize),
+			)
+				.into(),
+			WallShape::Eastwest => Collider::cuboid(fullRadius, pillarRadius).into(),
+			WallShape::Northsouth => Collider::cuboid(pillarRadius, fullRadius).into(),
+			WallShape::Solid => Collider::cuboid(fullRadius, fullRadius).into(),
+			WallShape::SolidNorth => (
+				Collider::cuboid(fullRadius, pillarRadius + divotSize),
+				vec2(0.0, -divotSize),
+			)
+				.into(),
+			WallShape::SolidEast => (
+				Collider::cuboid(pillarRadius + divotSize, fullRadius),
+				vec2(divotSize, 0.0),
+			)
+				.into(),
+			WallShape::SolidSouth => (
+				Collider::cuboid(fullRadius, pillarRadius + divotSize),
+				vec2(0.0, divotSize),
+			)
+				.into(),
+			WallShape::SolidWest => (
+				Collider::cuboid(pillarRadius + divotSize, fullRadius),
+				vec2(-divotSize, 0.0),
+			)
+				.into(),
 		}
 	}
 }
