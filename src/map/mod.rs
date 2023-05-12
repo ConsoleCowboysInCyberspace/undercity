@@ -179,6 +179,7 @@ impl Chunk {
 		}
 	}
 
+	/// Returns iterator of all (absolute) tile positions stored in this chunk.
 	pub fn tile_positions(&self) -> impl Iterator<Item = TilePos> {
 		let pos = self.pos;
 		(0 .. Chunk::diameterTiles as i32).flat_map(move |y| {
@@ -224,16 +225,19 @@ impl Map {
 		}
 	}
 
+	/// Returns minimum/maximum chunk positions that have been allocated.
 	pub fn used_chunks(&self) -> (ChunkPos, ChunkPos) {
 		let mut min = ChunkPos::of(i32::MAX, i32::MAX);
 		let mut max = ChunkPos::of(i32::MIN, i32::MIN);
 		for &pos in self.chunks.keys() {
+			// FIXME: need to ignore empty chunks (has only empty tiles)
 			*min = min.min(*pos);
 			*max = max.max(*pos);
 		}
 		(min, max)
 	}
 
+	/// Returns minimum/maximum tile positions that are nonempty.
 	pub fn used_tiles(&self) -> (TilePos, TilePos) {
 		let (minChunk, maxChunk) = self.used_chunks();
 		let (minChunk, maxChunk) = (&self[minChunk], &self[maxChunk]);
@@ -257,6 +261,8 @@ impl Map {
 		(min, max)
 	}
 
+	/// Copies all of `other` into `self`, with `other`'s min [`used_tiles`]
+	/// placed at `destination`.
 	pub fn copy_from(&mut self, other: &Self, destination: TilePos) {
 		let (from, to) = other.used_tiles();
 		for y in from.y ..= to.y {
@@ -270,6 +276,7 @@ impl Map {
 		}
 	}
 
+	/// Sets all tiles in a rect spanning `from ..= to`.
 	pub fn fill(&mut self, tile: Tile, from: TilePos, to: TilePos) {
 		let (from, to) = tilepos_rect(from, to);
 		for y in from.y ..= to.y {
@@ -279,6 +286,7 @@ impl Map {
 		}
 	}
 
+	/// Sets all tiles in a line. Only axis-aligned lines are supported.
 	pub fn fill_line(&mut self, tile: Tile, from: TilePos, to: TilePos) {
 		let (from, to) = tilepos_rect(from, to);
 		if from.y == to.y {
@@ -294,6 +302,7 @@ impl Map {
 		}
 	}
 
+	/// Sets all tiles on the border of a rect spanning `from ..= to`.
 	pub fn fill_border(&mut self, tile: Tile, from: TilePos, to: TilePos) {
 		let (from, to) = tilepos_rect(from, to);
 		self.fill_line(tile, TilePos::of(from.x, from.y), TilePos::of(to.x, from.y));

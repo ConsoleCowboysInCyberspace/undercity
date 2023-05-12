@@ -296,10 +296,13 @@ impl TilePos {
 		Self(ivec2(x, y))
 	}
 
+	/// Returns this tile position relative to its chunk (i.e. in `0
+	/// ..`[`Chunk::diameterTiles`].)
 	pub fn chunk_relative(self) -> Self {
 		Self(ivec2(self.x & 0x1F, self.y & 0x1F))
 	}
 
+	/// Returns the index of this tile position in the [`Chunk::tiles`] array.
 	pub fn chunk_index(self) -> usize {
 		debug_assert!(
 			self.x >= 0 &&
