@@ -307,15 +307,30 @@ fn tilepos_rect(l: TilePos, r: TilePos) -> (TilePos, TilePos) {
 	(l.min(*r).into(), l.max(*r).into())
 }
 
+impl Index<ChunkPos> for Map {
+	type Output = Chunk;
+
+	fn index(&self, pos: ChunkPos) -> &Self::Output {
+		self.chunks
+			.get(&pos)
+			.expect("Attempting to read chunk that has not been created")
+	}
+}
+
+impl IndexMut<ChunkPos> for Map {
+	fn index_mut(&mut self, pos: ChunkPos) -> &mut Self::Output {
+		self.chunks
+			.entry(pos)
+			.or_insert_with(|| Chunk::new(pos))
+	}
+}
+
 impl Index<TilePos> for Map {
 	type Output = TilePair;
 
 	fn index(&self, index: TilePos) -> &Self::Output {
-		let chunk = index.into();
-		let chunk = self
-			.chunks
-			.get(&chunk)
-			.expect("Attempting to read from chunk that has not been created");
+		let chunkPos = ChunkPos::from(index);
+		let chunk = &self[chunkPos];
 		let index = index.chunk_relative();
 		&chunk.tiles[index.chunk_index()]
 	}
@@ -323,8 +338,8 @@ impl Index<TilePos> for Map {
 
 impl IndexMut<TilePos> for Map {
 	fn index_mut(&mut self, index: TilePos) -> &mut Self::Output {
-		let pos = index.into();
-		let chunk = self.chunks.entry(pos).or_insert_with(|| Chunk::new(pos));
+		let chunkPos = ChunkPos::from(index);
+		let chunk = &mut self[chunkPos];
 		let index = index.chunk_relative();
 		&mut chunk.tiles[index.chunk_index()]
 	}
@@ -341,23 +356,5 @@ impl Index<(i32, i32)> for Map {
 impl IndexMut<(i32, i32)> for Map {
 	fn index_mut(&mut self, (x, y): (i32, i32)) -> &mut Self::Output {
 		&mut self[TilePos::of(x, y)]
-	}
-}
-
-impl Index<ChunkPos> for Map {
-	type Output = Chunk;
-
-	fn index(&self, pos: ChunkPos) -> &Self::Output {
-		self.chunks
-			.get(&pos)
-			.expect("Attempting to get chunk that has not been created")
-	}
-}
-
-impl IndexMut<ChunkPos> for Map {
-	fn index_mut(&mut self, pos: ChunkPos) -> &mut Self::Output {
-		self.chunks
-			.get_mut(&pos)
-			.expect("Attempting to get chunk that has not been created")
 	}
 }
