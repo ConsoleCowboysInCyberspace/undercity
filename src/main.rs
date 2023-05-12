@@ -8,13 +8,13 @@ use std::ops::Deref;
 use bevy::math::{ivec2, uvec2, vec2, vec3, Affine3A, Vec3Swizzles};
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponent;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::render::render_resource::{Extent3d, FilterMode, TextureDimension, TextureFormat};
 use bevy::render::{Extract, RenderApp, RenderSet};
 use bevy::sprite::{ExtractedSprite, ExtractedSprites};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
 use bevy_rapier2d::prelude::RapierPhysicsPlugin;
-use bevy_rapier2d::render::{RapierDebugRenderPlugin, DebugRenderContext};
+use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
@@ -81,14 +81,19 @@ pub fn isosprite_extract(
 fn main() {
 	let mut app = App::new();
 
-	app.add_plugins(DefaultPlugins.set(WindowPlugin {
-		primary_window: Some(Window {
-			title: "The Undercity".into(),
-			resolution: (1920.0, 1080.0).into(),
-			..default()
-		}),
-		..default()
-	}));
+	app.add_plugins(
+		DefaultPlugins
+			.set(WindowPlugin {
+				primary_window: Some(Window {
+					title: "The Undercity".into(),
+					resolution: (1920.0, 1080.0).into(),
+					..default()
+				}),
+				..default()
+			})
+			// use nearest neighbor scaling for textures, for the  a e s t h e t i c
+			.set(ImagePlugin::default_nearest()),
+	);
 
 	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
 		crate::map::tileDiameter,
