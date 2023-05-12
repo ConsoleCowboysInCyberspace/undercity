@@ -165,24 +165,33 @@ impl TilePair {
 
 #[derive(Clone)]
 pub struct Chunk {
+	pub pos: ChunkPos,
 	pub tiles: [TilePair; Self::diameterTiles.pow(2)],
 }
 
 impl Chunk {
 	pub const diameterTiles: usize = 32;
-}
 
-impl Default for Chunk {
-	fn default() -> Self {
+	pub fn new(pos: ChunkPos) -> Self {
 		Self {
+			pos,
 			tiles: [default(); Self::diameterTiles.pow(2)],
 		}
+	}
+
+	pub fn tile_positions(&self) -> impl Iterator<Item = TilePos> {
+		let pos = self.pos;
+		(0 .. Chunk::diameterTiles as i32).flat_map(move |y| {
+			(0 .. Chunk::diameterTiles as i32)
+				.map(move |x| TilePos::of(pos.x << 5 | x, pos.y << 5 | y))
+		})
 	}
 }
 
 impl Debug for Chunk {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		f.debug_struct("Chunk")
+			.field("pos", &self.pos)
 			.field("tiles", &format!("<{} tiles>", self.tiles.len()))
 			.finish()
 	}
@@ -205,19 +214,97 @@ impl Map {
 			.chunks
 			.into_iter()
 			.flat_map(|(pos, chunk)| {
-				(0 .. Chunk::diameterTiles as i32).flat_map(move |y| {
-					(0 .. Chunk::diameterTiles as i32).map(move |x| {
-						let tilePos = TilePos::of(pos.x << 5 | x, pos.y << 5 | y);
-						let tile = chunk.tiles[(y * Chunk::diameterTiles as i32 + x) as usize];
-						(tilePos, tile)
-					})
-				})
+				chunk
+					.tile_positions()
+					.map(move |pos| (pos, chunk.tiles[pos.chunk_relative().chunk_index()]))
 			})
 			.filter(|(_, pair)| !pair.is_empty());
 		for (pos, tile) in tiles {
 			tile.into_entity(pos, cmd, assets);
 		}
 	}
+
+	pub fn used_chunks(&self) -> (ChunkPos, ChunkPos) {
+		let mut min = ChunkPos::of(i32::MAX, i32::MAX);
+		let mut max = ChunkPos::of(i32::MIN, i32::MIN);
+		for &pos in self.chunks.keys() {
+			*min = min.min(*pos);
+			*max = max.max(*pos);
+		}
+		(min, max)
+	}
+
+	pub fn used_tiles(&self) -> (TilePos, TilePos) {
+		let (minChunk, maxChunk) = self.used_chunks();
+		let (minChunk, maxChunk) = (&self[minChunk], &self[maxChunk]);
+
+		let mut min = TilePos::of(i32::MAX, i32::MAX);
+		for pos in minChunk.tile_positions() {
+			let tile = minChunk.tiles[pos.chunk_relative().chunk_index()];
+			if !tile.is_empty() {
+				*min = min.min(*pos);
+			}
+		}
+
+		let mut max = TilePos::of(i32::MIN, i32::MIN);
+		for pos in maxChunk.tile_positions() {
+			let tile = maxChunk.tiles[pos.chunk_relative().chunk_index()];
+			if !tile.is_empty() {
+				*max = max.max(*pos);
+			}
+		}
+
+		(min, max)
+	}
+
+	pub fn copy_from(&mut self, other: &Self, destination: TilePos) {
+		let (from, to) = other.used_tiles();
+		for y in from.y ..= to.y {
+			let dy = y - from.y;
+			for x in from.x ..= to.x {
+				let dx = x - from.x;
+				let otherPos = (x, y);
+				let selfPos = (destination.x + dx, destination.y + dy);
+				self[selfPos] = other[otherPos];
+			}
+		}
+	}
+
+	pub fn fill(&mut self, tile: Tile, from: TilePos, to: TilePos) {
+		let (from, to) = tilepos_rect(from, to);
+		for y in from.y ..= to.y {
+			for x in from.x ..= to.x {
+				self[(x, y)].set(tile);
+			}
+		}
+	}
+
+	pub fn fill_line(&mut self, tile: Tile, from: TilePos, to: TilePos) {
+		let (from, to) = tilepos_rect(from, to);
+		if from.y == to.y {
+			for x in from.x ..= to.x {
+				self[(x, from.y)].set(tile);
+			}
+		} else if from.x == to.x {
+			for y in from.y ..= to.y {
+				self[(from.x, y)].set(tile);
+			}
+		} else {
+			assert!(false, "cannot fill diagonal lines");
+		}
+	}
+
+	pub fn fill_border(&mut self, tile: Tile, from: TilePos, to: TilePos) {
+		let (from, to) = tilepos_rect(from, to);
+		self.fill_line(tile, TilePos::of(from.x, from.y), TilePos::of(to.x, from.y));
+		self.fill_line(tile, TilePos::of(from.x, to.y), TilePos::of(to.x, to.y));
+		self.fill_line(tile, TilePos::of(from.x, from.y), TilePos::of(from.x, to.y));
+		self.fill_line(tile, TilePos::of(to.x, from.y), TilePos::of(to.x, to.y));
+	}
+}
+
+fn tilepos_rect(l: TilePos, r: TilePos) -> (TilePos, TilePos) {
+	(l.min(*r).into(), l.max(*r).into())
 }
 
 impl Index<TilePos> for Map {
@@ -230,16 +317,16 @@ impl Index<TilePos> for Map {
 			.get(&chunk)
 			.expect("Attempting to read from chunk that has not been created");
 		let index = index.chunk_relative();
-		&chunk.tiles[(index.y * Chunk::diameterTiles as i32 + index.x) as usize]
+		&chunk.tiles[index.chunk_index()]
 	}
 }
 
 impl IndexMut<TilePos> for Map {
 	fn index_mut(&mut self, index: TilePos) -> &mut Self::Output {
-		let chunk = index.into();
-		let chunk = self.chunks.entry(chunk).or_default();
+		let pos = index.into();
+		let chunk = self.chunks.entry(pos).or_insert_with(|| Chunk::new(pos));
 		let index = index.chunk_relative();
-		&mut chunk.tiles[(index.y * Chunk::diameterTiles as i32 + index.x) as usize]
+		&mut chunk.tiles[index.chunk_index()]
 	}
 }
 
@@ -254,5 +341,23 @@ impl Index<(i32, i32)> for Map {
 impl IndexMut<(i32, i32)> for Map {
 	fn index_mut(&mut self, (x, y): (i32, i32)) -> &mut Self::Output {
 		&mut self[TilePos::of(x, y)]
+	}
+}
+
+impl Index<ChunkPos> for Map {
+	type Output = Chunk;
+
+	fn index(&self, pos: ChunkPos) -> &Self::Output {
+		self.chunks
+			.get(&pos)
+			.expect("Attempting to get chunk that has not been created")
+	}
+}
+
+impl IndexMut<ChunkPos> for Map {
+	fn index_mut(&mut self, pos: ChunkPos) -> &mut Self::Output {
+		self.chunks
+			.get_mut(&pos)
+			.expect("Attempting to get chunk that has not been created")
 	}
 }

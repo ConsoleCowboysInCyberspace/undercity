@@ -98,7 +98,11 @@ fn main() {
 	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
 		crate::map::tileDiameter,
 	));
-	app.add_plugin(RapierDebugRenderPlugin::default().always_on_top().disabled());
+	app.add_plugin(
+		RapierDebugRenderPlugin::default()
+			.always_on_top()
+			.disabled(),
+	);
 	app.add_system(toggle_rapier_debug);
 
 	for func in setupApp {
@@ -178,68 +182,55 @@ fn main() {
 			});
 		}
 
-		let pos = ivec2(-10, -1);
+		let mut room = Map::new();
 		let tileset = Tileset::Gehena;
-		map[TilePos::of(pos.x + 0, pos.y + 0)].set(Tile {
+		room[TilePos::of(0, 0)].set(Tile {
 			ty: TileType::Wall(WallShape::Southeast),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 1, pos.y + 0)].set(Tile {
+		room[TilePos::of(1, 0)].set(Tile {
 			ty: TileType::Wall(WallShape::South),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 2, pos.y + 0)].set(Tile {
+		room[TilePos::of(2, 0)].set(Tile {
 			ty: TileType::Wall(WallShape::Southwest),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 0, pos.y + 1)].set(Tile {
+		room[TilePos::of(0, 1)].set(Tile {
 			ty: TileType::Wall(WallShape::East),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 1, pos.y + 1)].set(Tile {
+		room[TilePos::of(1, 1)].set(Tile {
 			// ty: TileType::Wall(WallShape::Pillar),
 			ty: TileType::Wall(WallShape::Solid),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 2, pos.y + 1)].set(Tile {
+		room[TilePos::of(2, 1)].set(Tile {
 			ty: TileType::Wall(WallShape::West),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 0, pos.y + 2)].set(Tile {
+		room[TilePos::of(0, 2)].set(Tile {
 			ty: TileType::Wall(WallShape::Northeast),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 1, pos.y + 2)].set(Tile {
+		room[TilePos::of(1, 2)].set(Tile {
 			ty: TileType::Wall(WallShape::North),
 			tileset,
 		});
-		map[TilePos::of(pos.x + 2, pos.y + 2)].set(Tile {
+		room[TilePos::of(2, 2)].set(Tile {
 			ty: TileType::Wall(WallShape::Northwest),
 			tileset,
 		});
-		let pos = pos - 1;
-		for y in (pos.y .. pos.y + 5) {
-			let mut h1;
-			let mut h2;
-			let indices: &mut dyn Iterator<Item = i32> = if y == pos.y || y == pos.y + 4 {
-				h1 = (pos.x .. pos.x + 5).into_iter();
-				&mut h1
-			} else {
-				h2 = [pos.x, pos.x + 4].into_iter();
-				&mut h2
-			};
-			for x in indices {
-				map[(x, y)].set(Tile {
-					ty: TileType::Wall(WallShape::Solid),
-					tileset,
-				});
-			}
-		}
-		#[cfg(none)]
-		map[(pos.x + 2, pos.y)].set(Tile {
-			ty: TileType::Floor(FloorType::Tileset),
-			tileset,
-		});
+		room.fill_border(
+			Tile {
+				ty: TileType::Wall(WallShape::Solid),
+				tileset,
+			},
+			TilePos::of(-1, -1),
+			TilePos::of(3, 3),
+		);
+		map.copy_from(&room, TilePos::of(-10, -1));
+		map.copy_from(&room, TilePos::of(-10, -10));
 
 		map.into_entities(&mut cmd, &assets);
 	});
@@ -247,10 +238,7 @@ fn main() {
 	app.run();
 }
 
-fn toggle_rapier_debug(
-	keyboard: Res<Input<KeyCode>>,
-	mut ctx: ResMut<DebugRenderContext>,
-) {
+fn toggle_rapier_debug(keyboard: Res<Input<KeyCode>>, mut ctx: ResMut<DebugRenderContext>) {
 	if keyboard.just_pressed(KeyCode::F11) {
 		ctx.enabled = !ctx.enabled;
 	}

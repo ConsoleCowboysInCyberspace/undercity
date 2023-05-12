@@ -112,7 +112,10 @@ fn move_camera(
 	cameraQuery.single_mut().translation = pos;
 }
 
-fn zoom_camera(mut query: Query<&mut OrthographicProjection, With<Camera2d>>, keyboard: Res<Input<KeyCode>>) {
+fn zoom_camera(
+	mut query: Query<&mut OrthographicProjection, With<Camera2d>>,
+	keyboard: Res<Input<KeyCode>>,
+) {
 	const step: f32 = 0.1;
 
 	let add = if keyboard.just_pressed(KeyCode::Equals) {

@@ -6,6 +6,7 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use super::tileRadius;
+use crate::map::Chunk;
 
 #[derive(Clone, Copy, Debug, Default)]
 #[repr(u8)]
@@ -297,6 +298,16 @@ impl TilePos {
 
 	pub fn chunk_relative(self) -> Self {
 		Self(ivec2(self.x & 0x1F, self.y & 0x1F))
+	}
+
+	pub fn chunk_index(self) -> usize {
+		debug_assert!(
+			self.x >= 0 &&
+				self.x < Chunk::diameterTiles as _ &&
+				self.y >= 0 && self.y < Chunk::diameterTiles as _,
+			"can only get chunk index of chunk-relative TilePos"
+		);
+		(self.y * Chunk::diameterTiles as i32 + self.x) as _
 	}
 }
 
