@@ -380,3 +380,60 @@ impl From<TilePos> for ChunkPos {
 		Self::of(pos.x >> 5, pos.y >> 5)
 	}
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct TileRect {
+	pub min: TilePos,
+	pub max: TilePos,
+}
+
+impl TileRect {
+	pub fn new(a: TilePos, b: TilePos) -> Self {
+		Self {
+			min: a.min(*b).into(),
+			max: a.max(*b).into(),
+		}
+	}
+
+	pub fn new_presorted(min: TilePos, max: TilePos) -> Self {
+		Self { min, max }
+	}
+
+	pub fn from_origin_size(origin: TilePos, size: IVec2) -> Self {
+		Self::new(origin, (*origin + size).into())
+	}
+
+	pub fn size(&self) -> IVec2 {
+		*self.max - *self.min
+	}
+
+	pub fn center(&self) -> TilePos {
+		(*self.min + self.size() / 2).into()
+	}
+
+	pub fn translate(&mut self, by: IVec2) {
+		*self.min += by;
+		*self.max += by;
+	}
+
+	pub fn intersects(&self, other: &Self) -> bool {
+		self.min.x <= other.max.x && other.min.x <= self.max.x &&
+		self.min.y <= other.max.y && other.min.y <= self.max.y
+	}
+
+	pub fn intersection(&self, other: &Self) -> Option<Self> {
+		if !self.intersects(other) {
+			return None;
+		}
+
+		let min = self.min.max(*other.min).into();
+		let max = self.max.min(*other.max).into();
+		Some(Self::new_presorted(min, max))
+	}
+}
+
+impl From<(TilePos, TilePos)> for TileRect {
+    fn from((a, b): (TilePos, TilePos)) -> Self {
+        Self::new(a, b)
+    }
+}

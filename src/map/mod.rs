@@ -238,7 +238,7 @@ impl Map {
 	}
 
 	/// Returns minimum/maximum tile positions that are nonempty.
-	pub fn used_tiles(&self) -> (TilePos, TilePos) {
+	pub fn used_tiles(&self) -> TileRect {
 		let (minChunk, maxChunk) = self.used_chunks();
 		let (minChunk, maxChunk) = (&self[minChunk], &self[maxChunk]);
 
@@ -258,17 +258,17 @@ impl Map {
 			}
 		}
 
-		(min, max)
+		TileRect::new_presorted(min, max)
 	}
 
 	/// Copies all of `other` into `self`, with `other`'s min [`used_tiles`]
 	/// placed at `destination`.
 	pub fn copy_from(&mut self, other: &Self, destination: TilePos) {
-		let (from, to) = other.used_tiles();
-		for y in from.y ..= to.y {
-			let dy = y - from.y;
-			for x in from.x ..= to.x {
-				let dx = x - from.x;
+		let rect = other.used_tiles();
+		for y in rect.min.y ..= rect.max.y {
+			let dy = y - rect.min.y;
+			for x in rect.min.x ..= rect.max.x {
+				let dx = x - rect.min.x;
 				let otherPos = (x, y);
 				let selfPos = (destination.x + dx, destination.y + dy);
 				self[selfPos] = other[otherPos];
@@ -278,9 +278,9 @@ impl Map {
 
 	/// Sets all tiles in a rect spanning `from ..= to`.
 	pub fn fill(&mut self, tile: Tile, from: TilePos, to: TilePos) {
-		let (from, to) = tilepos_rect(from, to);
-		for y in from.y ..= to.y {
-			for x in from.x ..= to.x {
+		let rect = TileRect::new(from, to);
+		for y in rect.min.y ..= rect.max.y {
+			for x in rect.min.x ..= rect.max.x {
 				self[(x, y)].set(tile);
 			}
 		}
@@ -288,14 +288,14 @@ impl Map {
 
 	/// Sets all tiles in a line. Only axis-aligned lines are supported.
 	pub fn fill_line(&mut self, tile: Tile, from: TilePos, to: TilePos) {
-		let (from, to) = tilepos_rect(from, to);
-		if from.y == to.y {
-			for x in from.x ..= to.x {
-				self[(x, from.y)].set(tile);
+		let rect = TileRect::new(from, to);
+		if rect.min.y == rect.max.y {
+			for x in rect.min.x ..= rect.max.x {
+				self[(x, rect.min.y)].set(tile);
 			}
-		} else if from.x == to.x {
-			for y in from.y ..= to.y {
-				self[(from.x, y)].set(tile);
+		} else if rect.min.x == rect.max.x {
+			for y in rect.min.y ..= rect.max.y {
+				self[(rect.min.x, y)].set(tile);
 			}
 		} else {
 			assert!(false, "cannot fill diagonal lines");
@@ -304,16 +304,12 @@ impl Map {
 
 	/// Sets all tiles on the border of a rect spanning `from ..= to`.
 	pub fn fill_border(&mut self, tile: Tile, from: TilePos, to: TilePos) {
-		let (from, to) = tilepos_rect(from, to);
-		self.fill_line(tile, TilePos::of(from.x, from.y), TilePos::of(to.x, from.y));
-		self.fill_line(tile, TilePos::of(from.x, to.y), TilePos::of(to.x, to.y));
-		self.fill_line(tile, TilePos::of(from.x, from.y), TilePos::of(from.x, to.y));
-		self.fill_line(tile, TilePos::of(to.x, from.y), TilePos::of(to.x, to.y));
+		let rect = TileRect::new(from, to);
+		self.fill_line(tile, TilePos::of(rect.min.x, rect.min.y), TilePos::of(rect.max.x, rect.min.y));
+		self.fill_line(tile, TilePos::of(rect.min.x, rect.max.y), TilePos::of(rect.max.x, rect.max.y));
+		self.fill_line(tile, TilePos::of(rect.min.x, rect.min.y), TilePos::of(rect.min.x, rect.max.y));
+		self.fill_line(tile, TilePos::of(rect.max.x, rect.min.y), TilePos::of(rect.max.x, rect.max.y));
 	}
-}
-
-fn tilepos_rect(l: TilePos, r: TilePos) -> (TilePos, TilePos) {
-	(l.min(*r).into(), l.max(*r).into())
 }
 
 impl Index<ChunkPos> for Map {
