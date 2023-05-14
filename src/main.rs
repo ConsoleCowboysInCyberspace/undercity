@@ -91,8 +91,16 @@ fn main() {
 				}),
 				..default()
 			})
-			// use nearest neighbor scaling for textures, for the  a e s t h e t i c
-			.set(ImagePlugin::default_nearest()),
+			.set(ImagePlugin {
+				default_sampler: bevy::render::render_resource::SamplerDescriptor {
+					// use nearest neighbor when scaling up textures, for the  a e s t h e t i c
+					mag_filter: FilterMode::Nearest,
+					// but still linear when scaling down, to help suppress Moiré patterns
+					min_filter: FilterMode::Linear,
+					mipmap_filter: FilterMode::Linear,
+					..default()
+				}
+			}),
 	);
 
 	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
