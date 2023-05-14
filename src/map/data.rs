@@ -344,7 +344,7 @@ impl From<TilePos> for IVec2 {
 pub struct ChunkPos(IVec2);
 
 impl ChunkPos {
-	pub fn of(x: i32, y: i32) -> Self {
+	pub const fn of(x: i32, y: i32) -> Self {
 		Self(ivec2(x, y))
 	}
 }

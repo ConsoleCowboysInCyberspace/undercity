@@ -172,10 +172,12 @@ pub struct Chunk {
 impl Chunk {
 	pub const diameterTiles: usize = 32;
 
-	pub fn new(pos: ChunkPos) -> Self {
+	pub const fn new(pos: ChunkPos) -> Self {
+		let default = Tile { ty: TileType::Empty, tileset: Tileset::Normal };
+		let default = TilePair { foreground: default, background: default };
 		Self {
 			pos,
-			tiles: [default(); Self::diameterTiles.pow(2)],
+			tiles: [default; Self::diameterTiles.pow(2)],
 		}
 	}
 
@@ -316,9 +318,10 @@ impl Index<ChunkPos> for Map {
 	type Output = Chunk;
 
 	fn index(&self, pos: ChunkPos) -> &Self::Output {
+		static ghostChunk: Chunk = Chunk::new(ChunkPos::of(i32::MAX, i32::MAX));
 		self.chunks
 			.get(&pos)
-			.expect("Attempting to read chunk that has not been created")
+			.unwrap_or(&ghostChunk)
 	}
 }
 
