@@ -5,7 +5,7 @@ use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::map::{tileDiameter, tileRadius, TileType, Tile, Landmark};
+use crate::map::{tileDiameter, tileRadius, Landmark, Tile, TileType};
 use crate::{world_to_iso, IsoSprite, IsoSpriteBundle};
 
 pub const depthRange: f32 = 1_000_000.0;
@@ -28,7 +28,14 @@ fn setup_app(app: &mut App) {
 }
 
 pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
-	let (texture, playerRect, _) = Tile { ty: TileType::Landmark { ty: Landmark::SpawnPlayer, flip: false }, ..default() }.texture_info();
+	let (texture, playerRect, _) = Tile {
+		ty: TileType::Landmark {
+			ty: Landmark::SpawnPlayer,
+			flip: false,
+		},
+		..default()
+	}
+	.texture_info();
 	let texture = assets.load(texture);
 	cmd.spawn((
 		Player,
@@ -49,7 +56,14 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 		},
 	));
 
-	let (_, cursorRect, _) = Tile { ty: TileType::Landmark { ty: Landmark::Cursor, flip: false }, ..default() }.texture_info();
+	let (_, cursorRect, _) = Tile {
+		ty: TileType::Landmark {
+			ty: Landmark::Cursor,
+			flip: false,
+		},
+		..default()
+	}
+	.texture_info();
 	cmd.spawn((
 		Cursor,
 		IsoSpriteBundle {
@@ -59,7 +73,7 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 				flip: false,
 			},
 			..default()
-		}
+		},
 	));
 
 	cmd.spawn(Camera2dBundle {

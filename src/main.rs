@@ -20,7 +20,6 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
 use self::entities::player::{depthRange, Player};
-use self::map::{tileDiameter, tileRadius};
 
 #[linkme::distributed_slice]
 pub static setupApp: [fn(&mut App)] = [..];
@@ -51,10 +50,7 @@ pub fn world_to_iso(pos: Vec2) -> Vec3 {
 
 pub fn iso_to_world(pos: Vec2) -> Vec2 {
 	let (x, y) = pos.into();
-	vec2(
-		x / 2.0 + y,
-		x / 2.0 - y,
-	)
+	vec2(x / 2.0 + y, x / 2.0 - y)
 }
 
 pub fn isosprite_extract(
