@@ -101,7 +101,7 @@ fn main() {
 					min_filter: FilterMode::Linear,
 					mipmap_filter: FilterMode::Linear,
 					..default()
-				}
+				},
 			})
 			.set(LogPlugin {
 				#[cfg(debug_assertions)]
@@ -129,12 +129,20 @@ fn main() {
 		.add_system(isosprite_extract.in_schedule(ExtractSchedule));
 
 	app.add_system(close_on_esc);
-	app.add_startup_systems((apply_system_buffers, setup_map).chain().after(entities::player::startup));
+	app.add_startup_systems(
+		(apply_system_buffers, setup_map)
+			.chain()
+			.after(entities::player::startup),
+	);
 
 	app.run();
 }
 
-fn setup_map(mut cmd: Commands, assets: ResMut<AssetServer>, mut playerQuery: Query<&mut Transform, With<Player>>) {
+fn setup_map(
+	mut cmd: Commands,
+	assets: ResMut<AssetServer>,
+	mut playerQuery: Query<&mut Transform, With<Player>>,
+) {
 	let (map, playerSpawn) = map::gen::generate_map(0);
 	playerQuery.single_mut().translation = (playerSpawn.as_vec2() * tileRadius, 0.0).into();
 	map.into_entities(&mut cmd, &assets);

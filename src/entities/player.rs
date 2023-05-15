@@ -14,11 +14,7 @@ pub struct Player;
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
 	app.add_startup_system(startup);
-	app.add_systems((
-		move_player,
-		move_camera.after(move_player),
-		zoom_camera,
-	));
+	app.add_systems((move_player, move_camera.after(move_player), zoom_camera));
 }
 
 pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {

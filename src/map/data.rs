@@ -339,14 +339,20 @@ impl TilePos {
 	/// Returns iterator over all [Moore](https://en.wikipedia.org/wiki/Moore_neighborhood) neighbors (includes corners.)
 	pub fn moore_neighborhood(self) -> impl Iterator<Item = Self> {
 		use self::Direction::*;
-		[North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest].into_iter()
+		[
+			North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest,
+		]
+		.into_iter()
 		.map(move |dir| self.neighbor(dir))
 	}
 
 	/// Returns iterator over all [von Neumann](https://en.wikipedia.org/wiki/Von_Neumann_neighborhood) neighbors (excludes corners.)
 	pub fn von_neumann_neighborhood(self) -> impl Iterator<Item = Self> {
 		use self::Direction::*;
-		[North, East, South, West].into_iter()
+		[
+			North, East, South, West,
+		]
+		.into_iter()
 		.map(move |dir| self.neighbor(dir))
 	}
 }
@@ -494,8 +500,10 @@ impl TileRect {
 	}
 
 	pub fn intersects(&self, other: &Self) -> bool {
-		self.min.x <= other.max.x && other.min.x <= self.max.x &&
-		self.min.y <= other.max.y && other.min.y <= self.max.y
+		self.min.x <= other.max.x &&
+			other.min.x <= self.max.x &&
+			self.min.y <= other.max.y &&
+			other.min.y <= self.max.y
 	}
 
 	pub fn intersection(&self, other: &Self) -> Option<Self> {
@@ -510,7 +518,7 @@ impl TileRect {
 }
 
 impl From<(TilePos, TilePos)> for TileRect {
-    fn from((a, b): (TilePos, TilePos)) -> Self {
-        Self::new(a, b)
-    }
+	fn from((a, b): (TilePos, TilePos)) -> Self {
+		Self::new(a, b)
+	}
 }

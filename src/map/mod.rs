@@ -106,7 +106,10 @@ impl TilePair {
 	}
 
 	pub fn is_door(&self) -> bool {
-		matches!(self.foreground.ty, TileType::DoorNS { .. } | TileType::DoorEW { .. })
+		matches!(
+			self.foreground.ty,
+			TileType::DoorNS { .. } | TileType::DoorEW { .. }
+		)
 	}
 
 	pub fn is_landmark(&self) -> bool {
@@ -190,8 +193,14 @@ impl Chunk {
 	pub const diameterTiles: usize = 32;
 
 	pub const fn new(pos: ChunkPos) -> Self {
-		let default = Tile { ty: TileType::Empty, tileset: Tileset::Normal };
-		let default = TilePair { foreground: default, background: default };
+		let default = Tile {
+			ty: TileType::Empty,
+			tileset: Tileset::Normal,
+		};
+		let default = TilePair {
+			foreground: default,
+			background: default,
+		};
 		Self {
 			pos,
 			tiles: [default; Self::diameterTiles.pow(2)],
@@ -253,7 +262,9 @@ impl Map {
 		let mut min = ChunkPos::of(i32::MAX, i32::MAX);
 		let mut max = ChunkPos::of(i32::MIN, i32::MIN);
 		for &pos in self.chunks.keys() {
-			if self[pos].is_empty() { continue; }
+			if self[pos].is_empty() {
+				continue;
+			}
 			*min = min.min(*pos);
 			*max = max.max(*pos);
 		}
@@ -270,7 +281,9 @@ impl Map {
 		for y in startTile.y ..= endTile.y {
 			for x in startTile.x ..= endTile.x {
 				let v = TilePos::of(x, y);
-				if self[v].is_empty() { continue; }
+				if self[v].is_empty() {
+					continue;
+				}
 				*min = min.min(*v);
 				*max = max.max(*v);
 			}
@@ -322,10 +335,26 @@ impl Map {
 	/// Sets all tiles on the border of a rect spanning `from ..= to`.
 	pub fn fill_border(&mut self, tile: Tile, from: TilePos, to: TilePos) {
 		let rect = TileRect::new(from, to);
-		self.fill_line(tile, TilePos::of(rect.min.x, rect.min.y), TilePos::of(rect.max.x, rect.min.y));
-		self.fill_line(tile, TilePos::of(rect.min.x, rect.max.y), TilePos::of(rect.max.x, rect.max.y));
-		self.fill_line(tile, TilePos::of(rect.min.x, rect.min.y), TilePos::of(rect.min.x, rect.max.y));
-		self.fill_line(tile, TilePos::of(rect.max.x, rect.min.y), TilePos::of(rect.max.x, rect.max.y));
+		self.fill_line(
+			tile,
+			TilePos::of(rect.min.x, rect.min.y),
+			TilePos::of(rect.max.x, rect.min.y),
+		);
+		self.fill_line(
+			tile,
+			TilePos::of(rect.min.x, rect.max.y),
+			TilePos::of(rect.max.x, rect.max.y),
+		);
+		self.fill_line(
+			tile,
+			TilePos::of(rect.min.x, rect.min.y),
+			TilePos::of(rect.min.x, rect.max.y),
+		);
+		self.fill_line(
+			tile,
+			TilePos::of(rect.max.x, rect.min.y),
+			TilePos::of(rect.max.x, rect.max.y),
+		);
 	}
 }
 
@@ -334,17 +363,13 @@ impl Index<ChunkPos> for Map {
 
 	fn index(&self, pos: ChunkPos) -> &Self::Output {
 		static ghostChunk: Chunk = Chunk::new(ChunkPos::of(i32::MAX, i32::MAX));
-		self.chunks
-			.get(&pos)
-			.unwrap_or(&ghostChunk)
+		self.chunks.get(&pos).unwrap_or(&ghostChunk)
 	}
 }
 
 impl IndexMut<ChunkPos> for Map {
 	fn index_mut(&mut self, pos: ChunkPos) -> &mut Self::Output {
-		self.chunks
-			.entry(pos)
-			.or_insert_with(|| Chunk::new(pos))
+		self.chunks.entry(pos).or_insert_with(|| Chunk::new(pos))
 	}
 }
 

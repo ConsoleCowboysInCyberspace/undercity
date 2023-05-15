@@ -1,41 +1,31 @@
 use core::panic;
 use std::collections::VecDeque;
 
-use rand::{rngs::SmallRng, SeedableRng, seq::SliceRandom};
+use rand::rngs::SmallRng;
+use rand::seq::SliceRandom;
+use rand::SeedableRng;
 
-use super::{*, data::Direction};
+use super::data::Direction;
+use super::*;
 
 impl TileRect {
 	pub fn tiles(self) -> impl Iterator<Item = TilePos> {
-		(self.min.y ..= self.max.y).flat_map(move |y|
-			(self.min.x ..= self.max.x).map(move |x| TilePos::of(x, y))
-		)
+		(self.min.y ..= self.max.y)
+			.flat_map(move |y| (self.min.x ..= self.max.x).map(move |x| TilePos::of(x, y)))
 	}
 
 	pub fn split(&self, xAxis: bool, firstWidth: i32) -> (Self, Self) {
 		if xAxis {
 			let mid = self.min.x + firstWidth;
 			(
-				Self::new_presorted(
-					self.min,
-					TilePos::of(mid, self.max.y),
-				),
-				Self::new_presorted(
-					TilePos::of(mid, self.min.y),
-					self.max,
-				),
+				Self::new_presorted(self.min, TilePos::of(mid, self.max.y)),
+				Self::new_presorted(TilePos::of(mid, self.min.y), self.max),
 			)
 		} else {
 			let mid = self.min.y + firstWidth;
 			(
-				Self::new_presorted(
-					self.min,
-					TilePos::of(self.max.x, mid),
-				),
-				Self::new_presorted(
-					TilePos::of(self.min.x, mid),
-					self.max,
-				),
+				Self::new_presorted(self.min, TilePos::of(self.max.x, mid)),
+				Self::new_presorted(TilePos::of(self.min.x, mid), self.max),
 			)
 		}
 	}
@@ -53,7 +43,7 @@ impl TileRect {
 				let y = rng.gen_range(self.min.y ..= self.max.y);
 				TilePos::of(x, y)
 			},
-			_ => unreachable!()
+			_ => unreachable!(),
 		}
 	}
 }
@@ -85,7 +75,14 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 
 	// fill hallway floors
 	for rect in allRects {
-		res.fill_border(Tile { ty: TileType::Floor(FloorType::Tileset), tileset: Tileset::Rock }, rect.min, rect.max);
+		res.fill_border(
+			Tile {
+				ty: TileType::Floor(FloorType::Tileset),
+				tileset: Tileset::Rock,
+			},
+			rect.min,
+			rect.max,
+		);
 	}
 
 	// generate rooms
@@ -107,10 +104,18 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 		assert!(res[pos].is_door());
 		let dir = match res[pos].foreground.ty {
 			TileType::DoorNS { .. } => {
-				if res[pos.neighbor(Direction::East)].is_floor() { Direction::West } else { Direction::East }
+				if res[pos.neighbor(Direction::East)].is_floor() {
+					Direction::West
+				} else {
+					Direction::East
+				}
 			},
 			TileType::DoorEW { .. } => {
-				if res[pos.neighbor(Direction::North)].is_floor() { Direction::South } else { Direction::North }
+				if res[pos.neighbor(Direction::North)].is_floor() {
+					Direction::South
+				} else {
+					Direction::North
+				}
 			},
 			_ => unreachable!(),
 		};
@@ -120,7 +125,10 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 			if !res[newPos].is_empty() {
 				continue 'paving;
 			}
-			res[newPos].set(Tile { ty: TileType::Floor(FloorType::Tileset), tileset: Tileset::Rock });
+			res[newPos].set(Tile {
+				ty: TileType::Floor(FloorType::Tileset),
+				tileset: Tileset::Rock,
+			});
 		}
 		eprintln!("couldn't connect door at {pos:?} to hallways");
 	}
@@ -128,10 +136,15 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 	// place walls around hallways
 	let mapRect = res.used_tiles();
 	for pos in mapRect.tiles() {
-		if !res[pos].is_floor() { continue; }
+		if !res[pos].is_floor() {
+			continue;
+		}
 		for neighbor in pos.moore_neighborhood() {
 			if res[neighbor].is_empty() {
-				res[neighbor].set(Tile { ty: TileType::Wall(WallShape::Solid), tileset: Tileset::Rock });
+				res[neighbor].set(Tile {
+					ty: TileType::Wall(WallShape::Solid),
+					tileset: Tileset::Rock,
+				});
 			}
 		}
 	}
@@ -139,7 +152,9 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 	// pick player spawnpoint
 	let mut iters = 0;
 	let playerSpawn = loop {
-		if iters > 1000 { panic!("couldn't find anywhere to spawn player"); }
+		if iters > 1000 {
+			panic!("couldn't find anywhere to spawn player");
+		}
 		iters += 1;
 
 		let room = roomRects.choose(&mut rng).unwrap();
@@ -148,9 +163,12 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 			rng.gen_range(room.min.y ..= room.max.y),
 		);
 
-		if !res[pos].is_floor() { continue; }
+		if !res[pos].is_floor() {
+			continue;
+		}
 		// FIXME: place several of these and pick one in `into_entities` or something
-		// res[pos].foreground.ty = TileType::Landmark { ty: Landmark::SpawnPlayer, flip: false };
+		// res[pos].foreground.ty = TileType::Landmark { ty: Landmark::SpawnPlayer,
+		// flip: false };
 		break pos;
 	};
 
@@ -161,12 +179,21 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 fn ree() {
 	let mut map = Map::new();
 
-	let tile = Tile { ty: TileType::Floor(FloorType::Tileset), tileset: Tileset::Normal };
+	let tile = Tile {
+		ty: TileType::Floor(FloorType::Tileset),
+		tileset: Tileset::Normal,
+	};
 	map[(0, 0)].set(tile);
-	assert_eq!(map.used_tiles(), TileRect::new(TilePos::of(0, 0), TilePos::of(0, 0)));
+	assert_eq!(
+		map.used_tiles(),
+		TileRect::new(TilePos::of(0, 0), TilePos::of(0, 0))
+	);
 	for x in 1 .. 100 {
 		map[(x, 0)].set(tile);
-		assert_eq!(map.used_tiles(), TileRect::new(TilePos::of(0, 0), TilePos::of(x, 0)));
+		assert_eq!(
+			map.used_tiles(),
+			TileRect::new(TilePos::of(0, 0), TilePos::of(x, 0))
+		);
 	}
 
 	panic!("teehee");
@@ -202,8 +229,22 @@ fn generate_room(rng: &mut SmallRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 
 	let mut res = Map::new();
 	let tileset = *tilesets.choose(rng).unwrap();
-	res.fill(Tile { ty: TileType::Floor(FloorType::Tileset), tileset }, rect.min, rect.max);
-	res.fill_border(Tile { ty: TileType::Wall(WallShape::Solid), tileset }, rect.min, rect.max);
+	res.fill(
+		Tile {
+			ty: TileType::Floor(FloorType::Tileset),
+			tileset,
+		},
+		rect.min,
+		rect.max,
+	);
+	res.fill_border(
+		Tile {
+			ty: TileType::Wall(WallShape::Solid),
+			tileset,
+		},
+		rect.min,
+		rect.max,
+	);
 
 	// place doors
 	let mut doors = vec![];
@@ -211,12 +252,18 @@ fn generate_room(rng: &mut SmallRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 		'placing: for _ in 0 .. 1000 {
 			let pos = rect.tile_on_border(rng);
 			for neighbor in pos.von_neumann_neighborhood() {
-				if res[neighbor].is_door() { continue 'placing; }
+				if res[neighbor].is_door() {
+					continue 'placing;
+				}
 			}
 
-			let door = if res[pos.neighbor(Direction::North)].is_wall() && res[pos.neighbor(data::Direction::South)].is_wall() {
+			let door = if res[pos.neighbor(Direction::North)].is_wall() &&
+				res[pos.neighbor(data::Direction::South)].is_wall()
+			{
 				TileType::DoorNS { open: false }
-			} else if res[pos.neighbor(Direction::East)].is_wall() && res[pos.neighbor(data::Direction::West)].is_wall() {
+			} else if res[pos.neighbor(Direction::East)].is_wall() &&
+				res[pos.neighbor(data::Direction::West)].is_wall()
+			{
 				TileType::DoorEW { open: false }
 			} else {
 				// trying to place door on a corner?
