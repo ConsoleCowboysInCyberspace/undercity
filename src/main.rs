@@ -5,6 +5,7 @@ pub mod map;
 
 use std::ops::Deref;
 
+use bevy::log::LogPlugin;
 use bevy::math::{ivec2, uvec2, vec2, vec3, Affine3A, Vec3Swizzles};
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponent;
@@ -101,6 +102,12 @@ fn main() {
 					mipmap_filter: FilterMode::Linear,
 					..default()
 				}
+			})
+			.set(LogPlugin {
+				#[cfg(debug_assertions)]
+				level: bevy::log::Level::DEBUG,
+				filter: "wgpu=warn,naga=warn,bevy_ecs=info".into(),
+				..default()
 			}),
 	);
 
