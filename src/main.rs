@@ -43,10 +43,18 @@ pub struct IsoSpriteBundle {
 	pub visibility: VisibilityBundle,
 }
 
-pub fn iso_pos(pos: Vec2) -> Vec3 {
+pub fn world_to_iso(pos: Vec2) -> Vec3 {
 	let (ix, iy) = pos.into();
 	let pos = vec2(ix + iy, (ix - iy) / 2.0);
 	(pos, depthRange / 2.0 - pos.y).into()
+}
+
+pub fn iso_to_world(pos: Vec2) -> Vec2 {
+	let (x, y) = pos.into();
+	vec2(
+		x / 2.0 + y,
+		x / 2.0 - y,
+	)
 }
 
 pub fn isosprite_extract(
@@ -57,7 +65,7 @@ pub fn isosprite_extract(
 ) {
 	for (entity, transform, sprite) in query.iter() {
 		let mut affine = transform.affine();
-		let mut isoPos = iso_pos(affine.translation.xy());
+		let mut isoPos = world_to_iso(affine.translation.xy());
 		isoPos.z += affine.translation.z;
 		affine.translation = isoPos.into();
 		extractedSprites.sprites.push(ExtractedSprite {
@@ -73,11 +81,12 @@ pub fn isosprite_extract(
 		});
 	}
 
-	/* let now = time.elapsed_seconds();
+	let now = time.elapsed_seconds();
+	#[cfg(none)]
 	if now - *last > 1.0 {
 		*last = now;
 		eprintln!("{} sprites", extractedSprites.sprites.len());
-	} */
+	}
 }
 
 fn main() {

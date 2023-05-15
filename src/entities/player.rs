@@ -1,40 +1,43 @@
+use bevy::input::mouse::MouseMotion;
 use bevy::math::{vec2, Vec3Swizzles};
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
 use rand::{thread_rng, Rng};
 
-use crate::map::{tileDiameter, tileRadius};
-use crate::{iso_pos, IsoSprite, IsoSpriteBundle};
+use crate::map::{tileDiameter, tileRadius, TileType, Tile, Landmark};
+use crate::{world_to_iso, IsoSprite, IsoSpriteBundle};
 
 pub const depthRange: f32 = 1_000_000.0;
 
 #[derive(Component)]
 pub struct Player;
 
+#[derive(Component)]
+pub struct Cursor;
+
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
 	app.add_startup_system(startup);
-	app.add_systems((move_player, move_camera.after(move_player), zoom_camera));
+	app.add_systems((
+		move_player,
+		move_camera.after(move_player),
+		zoom_camera,
+		move_cursor,
+	));
 }
 
 pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
-	let spritePos = vec2(256.0, 448.0);
+	let (texture, playerRect, _) = Tile { ty: TileType::Landmark { ty: Landmark::SpawnPlayer, flip: false }, ..default() }.texture_info();
+	let texture = assets.load(texture);
 	cmd.spawn((
 		Player,
 		IsoSpriteBundle {
 			sprite: IsoSprite {
-				texture: assets.load("tiles/misc.png"),
-				rect: Rect {
-					min: spritePos,
-					max: spritePos + 64.0,
-				},
+				texture: texture.clone(),
+				rect: playerRect,
 				flip: false,
 			},
-			// FIXME: mapgen needs to set this
-			transform: Transform::from_translation(
-				(vec2(2.0, -2.0) * crate::map::tileRadius, 0.0).into(),
-			)
-			.into(),
 			..default()
 		},
 		Collider::ball(tileRadius / 5.0),
@@ -45,6 +48,20 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 			..default()
 		},
 	));
+
+	let (_, cursorRect, _) = Tile { ty: TileType::Landmark { ty: Landmark::Cursor, flip: false }, ..default() }.texture_info();
+	cmd.spawn((
+		Cursor,
+		IsoSpriteBundle {
+			sprite: IsoSprite {
+				texture,
+				rect: cursorRect,
+				flip: false,
+			},
+			..default()
+		}
+	));
+
 	cmd.spawn(Camera2dBundle {
 		projection: OrthographicProjection {
 			far: depthRange,
@@ -111,7 +128,7 @@ fn move_camera(
 	playerQuery: Query<&Transform, With<Player>>,
 	mut cameraQuery: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
 ) {
-	let mut pos = iso_pos(playerQuery.single().translation.xy());
+	let mut pos = world_to_iso(playerQuery.single().translation.xy());
 	pos.z = depthRange;
 	cameraQuery.single_mut().translation = pos;
 }
@@ -131,4 +148,25 @@ fn zoom_camera(
 	};
 	let mut projection = query.single_mut();
 	projection.scale = (projection.scale.ln() + add).exp();
+}
+
+fn move_cursor(
+	mut cursor: Query<&mut Transform, With<Cursor>>,
+	camera: Query<(&Camera, &GlobalTransform)>,
+	window: Query<&Window, With<PrimaryWindow>>,
+	mut lastPos: Local<Vec2>,
+) {
+	let mut pos = window.single().cursor_position().unwrap_or(*lastPos);
+	*lastPos = pos;
+
+	let (camera, transform) = camera.single();
+	pos = camera.viewport_to_world_2d(transform, pos).unwrap();
+	pos = crate::iso_to_world(pos);
+
+	// snap to tile
+	pos /= tileRadius;
+	pos = vec2(pos.x.ceil(), pos.y.floor());
+	pos *= tileRadius;
+
+	cursor.single_mut().translation = (pos, tileDiameter).into();
 }

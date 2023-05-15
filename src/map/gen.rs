@@ -175,30 +175,6 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 	(res, playerSpawn)
 }
 
-#[test]
-fn ree() {
-	let mut map = Map::new();
-
-	let tile = Tile {
-		ty: TileType::Floor(FloorType::Tileset),
-		tileset: Tileset::Normal,
-	};
-	map[(0, 0)].set(tile);
-	assert_eq!(
-		map.used_tiles(),
-		TileRect::new(TilePos::of(0, 0), TilePos::of(0, 0))
-	);
-	for x in 1 .. 100 {
-		map[(x, 0)].set(tile);
-		assert_eq!(
-			map.used_tiles(),
-			TileRect::new(TilePos::of(0, 0), TilePos::of(x, 0))
-		);
-	}
-
-	panic!("teehee");
-}
-
 fn generate_room(rng: &mut SmallRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 	let tilesets = [
 		Tileset::BrickBlue,
