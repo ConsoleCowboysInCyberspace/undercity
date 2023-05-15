@@ -18,7 +18,8 @@ use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
-use self::entities::player::depthRange;
+use self::entities::player::{depthRange, Player};
+use self::map::{tileDiameter, tileRadius};
 
 #[linkme::distributed_slice]
 pub static setupApp: [fn(&mut App)] = [..];
@@ -71,11 +72,11 @@ pub fn isosprite_extract(
 		});
 	}
 
-	let now = time.elapsed_seconds();
+	/* let now = time.elapsed_seconds();
 	if now - *last > 1.0 {
 		*last = now;
 		eprintln!("{} sprites", extractedSprites.sprites.len());
-	}
+	} */
 }
 
 fn main() {
@@ -121,129 +122,15 @@ fn main() {
 		.add_system(isosprite_extract.in_schedule(ExtractSchedule));
 
 	app.add_system(close_on_esc);
-	app.add_startup_system(|mut cmd: Commands, assets: ResMut<AssetServer>| {
-		use map::*;
-		let mut map = Map::new();
-
-		let wall = Tile {
-			ty: TileType::Wall(WallShape::Solid),
-			tileset: Tileset::Cocutos,
-		};
-		for y in -4 .. 5 {
-			for x in [-4, 4] {
-				map[(x, y)].set(wall);
-			}
-		}
-		for x in -4 .. 5 {
-			for y in [-4, 4] {
-				map[(x, y)].set(wall);
-			}
-		}
-		for y in -3 .. 4 {
-			for x in -3 .. 4 {
-				let lava = (-1 ..= 1);
-				map[(x, y)].set(Tile {
-					ty: TileType::Floor(if x == 0 && y == 0 {
-						FloorType::LavaBlue
-					} else if lava.contains(&x) && lava.contains(&y) {
-						FloorType::LavaRed
-					} else {
-						FloorType::Tileset
-					}),
-					..wall
-				});
-			}
-		}
-
-		map[(0, 0)].set(Tile {
-			ty: TileType::Wall(WallShape::Pillar),
-			tileset: Tileset::Lapis,
-		});
-		map[(0, -4)].set(Tile {
-			ty: TileType::Floor(FloorType::Tileset),
-			..wall
-		});
-
-		let shapes = [
-			WallShape::Pillar,
-			WallShape::North,
-			WallShape::East,
-			WallShape::South,
-			WallShape::West,
-			WallShape::Northeast,
-			WallShape::Northwest,
-			WallShape::Southeast,
-			WallShape::Southwest,
-			WallShape::Eastwest,
-			WallShape::Northsouth,
-			WallShape::Solid,
-			WallShape::SolidNorth,
-			WallShape::SolidEast,
-			WallShape::SolidSouth,
-			WallShape::SolidWest,
-		];
-		for (x, shape) in shapes.into_iter().enumerate() {
-			let x = x as i32 - (shapes.len() / 2) as i32;
-			map[(x, -8)].set(Tile {
-				ty: TileType::Wall(shape),
-				tileset: Tileset::BrickCyan,
-			});
-		}
-
-		let mut room = Map::new();
-		let tileset = Tileset::Gehena;
-		room[TilePos::of(0, 0)].set(Tile {
-			ty: TileType::Wall(WallShape::Southeast),
-			tileset,
-		});
-		room[TilePos::of(1, 0)].set(Tile {
-			ty: TileType::Wall(WallShape::South),
-			tileset,
-		});
-		room[TilePos::of(2, 0)].set(Tile {
-			ty: TileType::Wall(WallShape::Southwest),
-			tileset,
-		});
-		room[TilePos::of(0, 1)].set(Tile {
-			ty: TileType::Wall(WallShape::East),
-			tileset,
-		});
-		room[TilePos::of(1, 1)].set(Tile {
-			// ty: TileType::Wall(WallShape::Pillar),
-			ty: TileType::Wall(WallShape::Solid),
-			tileset,
-		});
-		room[TilePos::of(2, 1)].set(Tile {
-			ty: TileType::Wall(WallShape::West),
-			tileset,
-		});
-		room[TilePos::of(0, 2)].set(Tile {
-			ty: TileType::Wall(WallShape::Northeast),
-			tileset,
-		});
-		room[TilePos::of(1, 2)].set(Tile {
-			ty: TileType::Wall(WallShape::North),
-			tileset,
-		});
-		room[TilePos::of(2, 2)].set(Tile {
-			ty: TileType::Wall(WallShape::Northwest),
-			tileset,
-		});
-		room.fill_border(
-			Tile {
-				ty: TileType::Wall(WallShape::Solid),
-				tileset,
-			},
-			TilePos::of(-1, -1),
-			TilePos::of(3, 3),
-		);
-		map.copy_from(&room, TilePos::of(-10, -1));
-		map.copy_from(&room, TilePos::of(-10, -10));
-
-		map.into_entities(&mut cmd, &assets);
-	});
+	app.add_startup_systems((apply_system_buffers, setup_map).chain().after(entities::player::startup));
 
 	app.run();
+}
+
+fn setup_map(mut cmd: Commands, assets: ResMut<AssetServer>, mut playerQuery: Query<&mut Transform, With<Player>>) {
+	let (map, playerSpawn) = map::gen::generate_map(0);
+	playerQuery.single_mut().translation = (playerSpawn.as_vec2() * tileRadius, 0.0).into();
+	map.into_entities(&mut cmd, &assets);
 }
 
 fn toggle_rapier_debug(keyboard: Res<Input<KeyCode>>, mut ctx: ResMut<DebugRenderContext>) {

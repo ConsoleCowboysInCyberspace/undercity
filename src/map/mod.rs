@@ -1,4 +1,5 @@
 pub mod data;
+pub mod gen;
 
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -96,6 +97,22 @@ impl TilePair {
 		self.foreground.is_empty() && self.background.is_empty()
 	}
 
+	pub fn is_wall(&self) -> bool {
+		matches!(self.foreground.ty, TileType::Wall(_))
+	}
+
+	pub fn is_floor(&self) -> bool {
+		self.foreground.is_empty() && matches!(self.background.ty, TileType::Floor(_))
+	}
+
+	pub fn is_door(&self) -> bool {
+		matches!(self.foreground.ty, TileType::DoorNS { .. } | TileType::DoorEW { .. })
+	}
+
+	pub fn is_landmark(&self) -> bool {
+		matches!(self.foreground.ty, TileType::Landmark { .. })
+	}
+
 	/// Set foreground or background depending on type of `tile`. Clears
 	/// foreground if setting a floor.
 	pub fn set(&mut self, tile: Tile) {
@@ -181,6 +198,10 @@ impl Chunk {
 		}
 	}
 
+	pub fn is_empty(&self) -> bool {
+		self.tiles.iter().all(TilePair::is_empty)
+	}
+
 	/// Returns iterator of all (absolute) tile positions stored in this chunk.
 	pub fn tile_positions(&self) -> impl Iterator<Item = TilePos> {
 		let pos = self.pos;
@@ -227,39 +248,33 @@ impl Map {
 		}
 	}
 
-	/// Returns minimum/maximum chunk positions that have been allocated.
+	/// Returns minimum/maximum positions of chunks that are nonempty.
 	pub fn used_chunks(&self) -> (ChunkPos, ChunkPos) {
 		let mut min = ChunkPos::of(i32::MAX, i32::MAX);
 		let mut max = ChunkPos::of(i32::MIN, i32::MIN);
 		for &pos in self.chunks.keys() {
-			// FIXME: need to ignore empty chunks (has only empty tiles)
+			if self[pos].is_empty() { continue; }
 			*min = min.min(*pos);
 			*max = max.max(*pos);
 		}
 		(min, max)
 	}
 
-	/// Returns minimum/maximum tile positions that are nonempty.
+	/// Returns minimum/maximum positions of tiles that are nonempty.
 	pub fn used_tiles(&self) -> TileRect {
 		let (minChunk, maxChunk) = self.used_chunks();
-		let (minChunk, maxChunk) = (&self[minChunk], &self[maxChunk]);
+		let (startTile, endTile) = (minChunk.min_tile(), maxChunk.max_tile());
 
 		let mut min = TilePos::of(i32::MAX, i32::MAX);
-		for pos in minChunk.tile_positions() {
-			let tile = minChunk.tiles[pos.chunk_relative().chunk_index()];
-			if !tile.is_empty() {
-				*min = min.min(*pos);
-			}
-		}
-
 		let mut max = TilePos::of(i32::MIN, i32::MIN);
-		for pos in maxChunk.tile_positions() {
-			let tile = maxChunk.tiles[pos.chunk_relative().chunk_index()];
-			if !tile.is_empty() {
-				*max = max.max(*pos);
+		for y in startTile.y ..= endTile.y {
+			for x in startTile.x ..= endTile.x {
+				let v = TilePos::of(x, y);
+				if self[v].is_empty() { continue; }
+				*min = min.min(*v);
+				*max = max.max(*v);
 			}
 		}
-
 		TileRect::new_presorted(min, max)
 	}
 

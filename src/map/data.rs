@@ -255,6 +255,24 @@ pub enum Landmark {
 	ShrineDemon = 113,
 	ShrineUrn = 114,
 	ShrineChair = 115,
+
+	SpawnPlayer = 116,
+	SpawnWitch = 119,
+	SpawnWitchette = 120,
+	SpawnJester = 124,
+	SpawnRedDemon = 125,
+	SpawnYellowDemon = 127,
+	SpawnGreenDemon = 130,
+	SpawnBlueDemon = 131,
+	SpawnWingedDemon = 132,
+
+	// these are just to get the sprite lmao
+	Cursor = 165,
+	ExplosionRed = 168,
+	ExplosionBlue = 171,
+	ExplosionGreen = 174,
+	ExplosionSmokeLight = 179,
+	ExplosionSmokeDark = 180,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -312,6 +330,25 @@ impl TilePos {
 		);
 		(self.y * Chunk::diameterTiles as i32 + self.x) as _
 	}
+
+	/// Returns neighboring tile in the given direction.
+	pub fn neighbor(&self, dir: Direction) -> Self {
+		(self.0 + dir.delta()).into()
+	}
+
+	/// Returns iterator over all [Moore](https://en.wikipedia.org/wiki/Moore_neighborhood) neighbors (includes corners.)
+	pub fn moore_neighborhood(self) -> impl Iterator<Item = Self> {
+		use self::Direction::*;
+		[North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest].into_iter()
+		.map(move |dir| self.neighbor(dir))
+	}
+
+	/// Returns iterator over all [von Neumann](https://en.wikipedia.org/wiki/Von_Neumann_neighborhood) neighbors (excludes corners.)
+	pub fn von_neumann_neighborhood(self) -> impl Iterator<Item = Self> {
+		use self::Direction::*;
+		[North, East, South, West].into_iter()
+		.map(move |dir| self.neighbor(dir))
+	}
 }
 
 impl Deref for TilePos {
@@ -347,6 +384,19 @@ impl ChunkPos {
 	pub const fn of(x: i32, y: i32) -> Self {
 		Self(ivec2(x, y))
 	}
+
+	/// Returns the northwesternmost tile in this chunk.
+	pub fn min_tile(&self) -> TilePos {
+		TilePos::of(
+			self.x * Chunk::diameterTiles as i32,
+			self.y * Chunk::diameterTiles as i32,
+		)
+	}
+
+	/// Returns the southeasternmost tile in this chunk.
+	pub fn max_tile(&self) -> TilePos {
+		(*self.min_tile() + IVec2::splat(Chunk::diameterTiles as i32 - 1)).into()
+	}
 }
 
 impl Deref for ChunkPos {
@@ -381,7 +431,34 @@ impl From<TilePos> for ChunkPos {
 	}
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Direction {
+	North,
+	NorthEast,
+	East,
+	SouthEast,
+	South,
+	SouthWest,
+	West,
+	NorthWest,
+}
+
+impl Direction {
+	pub fn delta(self) -> IVec2 {
+		match self {
+			Direction::North => ivec2(0, -1),
+			Direction::NorthEast => ivec2(1, -1),
+			Direction::East => ivec2(1, 0),
+			Direction::SouthEast => ivec2(1, 1),
+			Direction::South => ivec2(0, 1),
+			Direction::SouthWest => ivec2(-1, 1),
+			Direction::West => ivec2(-1, 0),
+			Direction::NorthWest => ivec2(-1, -1),
+		}
+	}
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TileRect {
 	pub min: TilePos,
 	pub max: TilePos,
