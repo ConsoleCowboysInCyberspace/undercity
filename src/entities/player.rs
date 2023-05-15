@@ -9,17 +9,19 @@ use crate::{iso_pos, IsoSprite, IsoSpriteBundle};
 pub const depthRange: f32 = 1_000_000.0;
 
 #[derive(Component)]
-struct Player;
+pub struct Player;
 
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
 	app.add_startup_system(startup);
-	app.add_system(move_player);
-	app.add_system(move_camera.after(move_player));
-	app.add_system(zoom_camera);
+	app.add_systems((
+		move_player,
+		move_camera.after(move_player),
+		zoom_camera,
+	));
 }
 
-fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
+pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 	let spritePos = vec2(256.0, 448.0);
 	cmd.spawn((
 		Player,
@@ -77,8 +79,14 @@ fn move_player(
 	}
 	vel = vel.normalize_or_zero();
 
+	let sprint = if keyboard.pressed(KeyCode::LShift) {
+		4.0
+	} else {
+		1.0
+	};
+
 	let (mut controller, mut sprite) = playerQuery.single_mut();
-	let displacement = vel.normalize_or_zero() * tileDiameter * time.delta_seconds();
+	let displacement = vel.normalize_or_zero() * tileDiameter * sprint * time.delta_seconds();
 	controller.translation = Some(displacement);
 
 	// flip sprite to match movement direction
@@ -104,7 +112,7 @@ fn move_player(
 }
 
 fn move_camera(
-	mut playerQuery: Query<&Transform, With<Player>>,
+	playerQuery: Query<&Transform, With<Player>>,
 	mut cameraQuery: Query<&mut Transform, (With<Camera2d>, Without<Player>)>,
 ) {
 	let mut pos = iso_pos(playerQuery.single().translation.xy());
