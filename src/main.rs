@@ -119,12 +119,15 @@ fn main() {
 	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
 		crate::map::tileDiameter,
 	));
-	app.add_plugin(
-		RapierDebugRenderPlugin::default()
-			.always_on_top()
-			.disabled(),
-	);
-	app.add_system(toggle_rapier_debug);
+	#[cfg(debug_assertions)]
+	{
+		app.add_plugin(
+			RapierDebugRenderPlugin::default()
+				.always_on_top()
+				.disabled(),
+		);
+		app.add_system(toggle_rapier_debug);
+	}
 
 	for func in setupApp {
 		func(&mut app);
