@@ -151,8 +151,22 @@ fn setup_map(
 	assets: ResMut<AssetServer>,
 	mut playerQuery: Query<&mut Transform, With<Player>>,
 ) {
-	let (map, playerSpawn) = map::gen::generate_map(0);
+	use crate::map::*;
+
+	let (mut map, mut rng) = map::gen::generate_map(0);
+
+	let playerSpawns = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+		matches!(
+			pair.foreground.ty,
+			TileType::Landmark {
+				ty: Landmark::SpawnPlayer,
+				..
+			}
+		)
+	});
+	let playerSpawn = playerSpawns.choose(&mut rng).unwrap().0;
 	playerQuery.single_mut().translation = (playerSpawn.as_vec2() * tileRadius, 0.0).into();
+
 	map.into_entities(&mut cmd, &assets);
 }
 

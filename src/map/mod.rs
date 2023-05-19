@@ -356,6 +356,30 @@ impl Map {
 			TilePos::of(rect.max.x, rect.max.y),
 		);
 	}
+
+	/// Finds all tiles matching the given `predicate`, replaces them with
+	/// `replacement`, and returns (the foreground of) those that matched.
+	pub fn pluck_tiles(
+		&mut self,
+		replacement: TileType,
+		mut predicate: impl FnMut(TilePos, &TilePair) -> bool,
+	) -> Vec<(TilePos, Tile)> {
+		let mut res = vec![];
+		for pos in self.used_tiles().tiles() {
+			let tile = self[pos];
+			if !predicate(pos, &tile) {
+				continue;
+			}
+
+			self[pos].set(Tile {
+				ty: replacement,
+				// landmarks may not have correct tileset, but the floor probably will
+				..tile.background
+			});
+			res.push((pos, tile.foreground));
+		}
+		res
+	}
 }
 
 impl Index<ChunkPos> for Map {

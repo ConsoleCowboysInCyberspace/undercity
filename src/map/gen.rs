@@ -48,7 +48,7 @@ impl TileRect {
 	}
 }
 
-pub fn generate_map(seed: u64) -> (Map, TilePos) {
+pub fn generate_map(seed: u64) -> (Map, SmallRng) {
 	let mut rng = SmallRng::seed_from_u64(seed);
 
 	let mut allRects = vec![];
@@ -149,14 +149,9 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 		}
 	}
 
-	// pick player spawnpoint
-	let mut iters = 0;
-	let playerSpawn = loop {
-		if iters > 1000 {
-			panic!("couldn't find anywhere to spawn player");
-		}
-		iters += 1;
-
+	// place player spawnpoints
+	let mut spawns = 0;
+	for _ in 0 .. 1000 {
 		let room = roomRects.choose(&mut rng).unwrap();
 		let pos = TilePos::of(
 			rng.gen_range(room.min.x ..= room.max.x),
@@ -166,13 +161,18 @@ pub fn generate_map(seed: u64) -> (Map, TilePos) {
 		if !res[pos].is_floor() {
 			continue;
 		}
-		// FIXME: place several of these and pick one in `into_entities` or something
-		// res[pos].foreground.ty = TileType::Landmark { ty: Landmark::SpawnPlayer,
-		// flip: false };
-		break pos;
-	};
+		res[pos].foreground.ty = TileType::Landmark {
+			ty: Landmark::SpawnPlayer,
+			flip: false,
+		};
+		spawns += 1;
 
-	(res, playerSpawn)
+		if spawns >= 5 {
+			break;
+		}
+	}
+
+	(res, rng)
 }
 
 fn generate_room(rng: &mut SmallRng, rect: TileRect) -> (Map, Vec<TilePos>) {
