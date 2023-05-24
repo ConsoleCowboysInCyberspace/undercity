@@ -18,6 +18,7 @@ use bevy_rapier2d::prelude::RapierPhysicsPlugin;
 use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
+pub use anyhow::Result as AResult;
 
 use self::entities::player::{depthRange, Player};
 
@@ -148,12 +149,18 @@ fn main() {
 
 fn setup_map(
 	mut cmd: Commands,
-	assets: ResMut<AssetServer>,
+	assets: Res<AssetServer>,
 	mut playerQuery: Query<&mut Transform, With<Player>>,
 ) {
 	use crate::map::*;
 
 	let (mut map, mut rng) = map::gen::generate_map(0);
+
+	let mut doors = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| pair.is_door());
+	doors.extend(map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| pair.is_door()));
+	for (pos, tile) in doors {
+		entities::door::make_door(&mut cmd, &assets, pos, tile);
+	}
 
 	let playerSpawns = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
 		matches!(
