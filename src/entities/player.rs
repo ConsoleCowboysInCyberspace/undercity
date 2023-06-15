@@ -40,8 +40,8 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 	cmd.spawn((
 		Player,
 		IsoSpriteBundle {
+			texture: texture.clone(),
 			sprite: IsoSprite {
-				texture: texture.clone(),
 				rect: playerRect,
 				flip: false,
 			},
@@ -67,8 +67,8 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 	cmd.spawn((
 		Cursor,
 		IsoSpriteBundle {
+			texture,
 			sprite: IsoSprite {
-				texture,
 				rect: cursorRect,
 				flip: false,
 			},

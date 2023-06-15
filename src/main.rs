@@ -27,13 +27,14 @@ pub static setupApp: [fn(&mut App)] = [..];
 
 #[derive(Clone, Debug, Default, Component)]
 pub struct IsoSprite {
-	pub texture: Handle<Image>,
 	pub rect: Rect,
 	pub flip: bool,
 }
 
 #[derive(Debug, Default, Bundle)]
 pub struct IsoSpriteBundle {
+	pub texture: Handle<Image>,
+
 	pub sprite: IsoSprite,
 
 	#[bundle]
@@ -55,12 +56,12 @@ pub fn iso_to_world(pos: Vec2) -> Vec2 {
 }
 
 pub fn isosprite_extract(
-	mut query: Extract<Query<(Entity, &GlobalTransform, &IsoSprite)>>,
+	mut query: Extract<Query<(Entity, &GlobalTransform, &Handle<Image>, &IsoSprite)>>,
 	mut extractedSprites: ResMut<ExtractedSprites>,
 	time: Res<Time>,
 	mut last: Local<f32>,
 ) {
-	for (entity, transform, sprite) in query.iter() {
+	for (entity, transform, texture, sprite) in query.iter() {
 		let mut affine = transform.affine();
 		let mut isoPos = world_to_iso(affine.translation.xy());
 		isoPos.z += affine.translation.z;
@@ -71,7 +72,7 @@ pub fn isosprite_extract(
 			color: Color::WHITE,
 			rect: Some(sprite.rect),
 			custom_size: None,
-			image_handle_id: sprite.texture.id(),
+			image_handle_id: texture.id(),
 			flip_x: sprite.flip,
 			flip_y: false,
 			anchor: Vec2::ZERO, // center

@@ -72,8 +72,8 @@ impl Tile {
 
 		(
 			IsoSpriteBundle {
+				texture,
 				sprite: IsoSprite {
-					texture,
 					rect,
 					flip,
 					..default()
