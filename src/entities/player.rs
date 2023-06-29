@@ -51,7 +51,10 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 		LockedAxes::ROTATION_LOCKED,
 		Dominance::group(64),
 		Velocity::default(),
-		Damping { linear_damping: 1.0, angular_damping: 1.0 },
+		Damping {
+			linear_damping: 1.0,
+			angular_damping: 1.0,
+		},
 		Collider::ball(tileRadius / 5.0),
 		ColliderDebugColor(Color::YELLOW),
 	));

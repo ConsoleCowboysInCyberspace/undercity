@@ -1,9 +1,12 @@
 use anyhow::anyhow;
 use bevy::prelude::*;
-use bevy_rapier2d::{prelude::{Sensor, CollisionGroups, Group, RigidBody, Collider, SolverGroups}, render::ColliderDebugColor};
-use rand::{seq::{IteratorRandom, SliceRandom}, thread_rng};
+use bevy_rapier2d::prelude::{Collider, CollisionGroups, Group, RigidBody, Sensor, SolverGroups};
+use bevy_rapier2d::render::ColliderDebugColor;
+use rand::seq::{IteratorRandom, SliceRandom};
+use rand::thread_rng;
 
-use crate::{map::{TileType, Tile, TilePos, Tileset, WallShape}, AResult, IsoSprite};
+use crate::map::{Tile, TilePos, TileType, Tileset, WallShape};
+use crate::{AResult, IsoSprite};
 
 #[derive(Component)]
 pub struct Door(Tile, Collider);
@@ -19,20 +22,22 @@ impl Door {
 
 	pub fn toggle(&mut self) {
 		match &mut self.0.ty {
-			TileType::DoorNS { open } |
-			TileType::DoorEW { open } => *open = !*open,
+			TileType::DoorNS { open } | TileType::DoorEW { open } => *open = !*open,
 			_ => unreachable!(),
 		}
 	}
 }
 
 pub fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: Tile) {
-	assert!(matches!(tile.ty, TileType::DoorNS { .. } | TileType::DoorEW { .. }));
+	assert!(matches!(
+		tile.ty,
+		TileType::DoorNS { .. } | TileType::DoorEW { .. }
+	));
 	let (sprite, _) = tile.into_bundle(pos.as_vec2(), assets);
 
 	let shape = match tile.ty {
-		TileType::DoorNS { .. } => { WallShape::Northsouth },
-		TileType::DoorEW { .. } => { WallShape::Eastwest },
+		TileType::DoorNS { .. } => WallShape::Northsouth,
+		TileType::DoorEW { .. } => WallShape::Eastwest,
 		_ => unreachable!(),
 	};
 	let collider = shape.collider();
@@ -52,16 +57,19 @@ pub fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: T
 
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
-	app.add_systems((
-		update_doors,
-		temp_toggle_doors,
-	));
+	app.add_systems((update_doors, temp_toggle_doors));
 }
 
 fn update_doors(
 	mut cmd: Commands,
 	mut query: Query<
-		(Entity, &Door, &mut IsoSprite, &mut CollisionGroups, &mut SolverGroups),
+		(
+			Entity,
+			&Door,
+			&mut IsoSprite,
+			&mut CollisionGroups,
+			&mut SolverGroups,
+		),
 		// Or<(Added<Door>, Changed<Door>)>
 	>,
 ) {
@@ -78,8 +86,7 @@ fn update_doors(
 			collisionGroups.filters = Group::NONE;
 			solverGroups.memberships = Group::NONE;
 			solverGroups.filters = Group::NONE;
-		}
-		else {
+		} else {
 			ent.remove::<Sensor>();
 			// ent.insert(CollisionGroups::new(Group::ALL, Group::ALL));
 			// ent.insert(door.1.clone());
@@ -97,10 +104,14 @@ fn temp_toggle_doors(
 	time: Res<Time>,
 	mut last: Local<f32>,
 	mut indices: Local<Vec<usize>>,
-	mut index: Local<usize>
+	mut index: Local<usize>,
 ) {
-	if query.is_empty() { return; }
-	if indices.is_empty() { *indices = (0 .. query.iter().len()).collect(); }
+	if query.is_empty() {
+		return;
+	}
+	if indices.is_empty() {
+		*indices = (0 .. query.iter().len()).collect();
+	}
 	if *index >= indices.len() {
 		indices.shuffle(&mut thread_rng());
 		*index = 0;

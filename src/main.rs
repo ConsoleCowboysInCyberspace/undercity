@@ -5,6 +5,7 @@ pub mod map;
 
 use std::ops::Deref;
 
+pub use anyhow::Result as AResult;
 use bevy::log::LogPlugin;
 use bevy::math::{ivec2, uvec2, vec2, vec3, Affine3A, Vec3Swizzles};
 use bevy::prelude::*;
@@ -14,11 +15,10 @@ use bevy::render::{Extract, RenderApp, RenderSet};
 use bevy::sprite::{ExtractedSprite, ExtractedSprites, SpriteSystem};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
-use bevy_rapier2d::prelude::{RapierPhysicsPlugin, RapierConfiguration};
+use bevy_rapier2d::prelude::{RapierConfiguration, RapierPhysicsPlugin};
 use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
-pub use anyhow::Result as AResult;
 
 use self::entities::player::{depthRange, Player};
 
@@ -163,8 +163,14 @@ fn setup_map(
 
 	let (mut map, mut rng) = map::gen::generate_map(0);
 
-	let mut doors = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| pair.is_door());
-	doors.extend(map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| pair.is_door()));
+	let mut doors = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+		pair.is_door()
+	});
+	doors.extend(
+		map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+			pair.is_door()
+		}),
+	);
 	for (pos, tile) in doors {
 		entities::door::make_door(&mut cmd, &assets, pos, tile);
 	}
