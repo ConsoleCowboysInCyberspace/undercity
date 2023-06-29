@@ -14,7 +14,7 @@ use bevy::render::{Extract, RenderApp, RenderSet};
 use bevy::sprite::{ExtractedSprite, ExtractedSprites, SpriteSystem};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
-use bevy_rapier2d::prelude::RapierPhysicsPlugin;
+use bevy_rapier2d::prelude::{RapierPhysicsPlugin, RapierConfiguration};
 use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
@@ -118,6 +118,9 @@ fn main() {
 			}),
 	);
 
+	let mut rapierConfig = RapierConfiguration::default();
+	rapierConfig.gravity = Vec2::ZERO;
+	app.insert_resource(rapierConfig);
 	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
 		crate::map::tileDiameter,
 	));
