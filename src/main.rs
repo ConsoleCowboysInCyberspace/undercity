@@ -11,7 +11,7 @@ use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponent;
 use bevy::render::render_resource::{Extent3d, FilterMode, TextureDimension, TextureFormat};
 use bevy::render::{Extract, RenderApp, RenderSet};
-use bevy::sprite::{ExtractedSprite, ExtractedSprites};
+use bevy::sprite::{ExtractedSprite, ExtractedSprites, SpriteSystem};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
 use bevy_rapier2d::prelude::RapierPhysicsPlugin;
@@ -135,8 +135,11 @@ fn main() {
 		func(&mut app);
 	}
 
-	app.sub_app_mut(RenderApp)
-		.add_system(isosprite_extract.in_schedule(ExtractSchedule));
+	app.sub_app_mut(RenderApp).add_system(
+		isosprite_extract
+			.after(SpriteSystem::ExtractSprites)
+			.in_schedule(ExtractSchedule),
+	);
 
 	app.add_system(close_on_esc);
 	app.add_startup_systems(
