@@ -47,13 +47,13 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 			},
 			..default()
 		},
+		RigidBody::Dynamic,
+		LockedAxes::ROTATION_LOCKED,
+		Dominance::group(64),
+		Velocity::default(),
+		Damping { linear_damping: 1.0, angular_damping: 1.0 },
 		Collider::ball(tileRadius / 5.0),
 		ColliderDebugColor(Color::YELLOW),
-		KinematicCharacterController {
-			autostep: None,
-			snap_to_ground: None,
-			..default()
-		},
 	));
 
 	let (_, cursorRect, _) = Tile {
@@ -86,7 +86,7 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 }
 
 fn move_player(
-	mut playerQuery: Query<(&mut KinematicCharacterController, &mut IsoSprite), With<Player>>,
+	mut playerQuery: Query<(&mut Velocity, &mut IsoSprite), With<Player>>,
 	time: Res<Time>,
 	keyboard: Res<Input<KeyCode>>,
 	mut lastRngFlip: Local<f64>,
@@ -112,9 +112,8 @@ fn move_player(
 		1.0
 	};
 
-	let (mut controller, mut sprite) = playerQuery.single_mut();
-	let displacement = vel.normalize_or_zero() * tileDiameter * sprint * time.delta_seconds();
-	controller.translation = Some(displacement);
+	let (mut velocity, mut sprite) = playerQuery.single_mut();
+	velocity.linvel = vel.normalize_or_zero() * tileDiameter * sprint;
 
 	// flip sprite to match movement direction
 	if vel.length_squared() > 0.0 {
