@@ -1,12 +1,13 @@
 use bevy::input::mouse::MouseMotion;
-use bevy::math::{vec2, Vec3Swizzles};
+use bevy::math::{vec2, vec3, Vec3Swizzles};
 use bevy::prelude::*;
+use bevy::render::primitives::Aabb;
 use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
 use rand::{thread_rng, Rng};
 
 use crate::map::{tileDiameter, tileRadius, Landmark, Tile, TileType};
-use crate::{world_to_iso, IsoSprite, IsoSpriteBundle};
+use crate::{find_interactible_entities, world_to_iso, InteractEvent, IsoSprite, IsoSpriteBundle};
 
 pub const depthRange: f32 = 1_000_000.0;
 
@@ -24,6 +25,7 @@ fn setup_app(app: &mut App) {
 		move_camera.after(move_player),
 		zoom_camera,
 		move_cursor,
+		interact.after(move_cursor),
 	));
 }
 
@@ -185,4 +187,19 @@ fn move_cursor(
 	pos *= tileRadius;
 
 	cursor.single_mut().translation = (pos, tileDiameter).into();
+}
+
+fn interact(world: &mut World) {
+	let keyboard: &Input<KeyCode> = world.resource();
+	if keyboard.just_pressed(KeyCode::E) {
+		let mut cursor = world.query_filtered::<&Transform, With<Cursor>>();
+		let mut player = world.query_filtered::<Entity, With<Player>>();
+		let pos = cursor.single(&world).translation.xy();
+		let ents = find_interactible_entities(pos, 8.0, world);
+		let Some(&target) = ents.first() else { return; };
+		world.send_event(InteractEvent {
+			source: player.single(&world),
+			target,
+		});
+	}
 }

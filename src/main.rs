@@ -10,17 +10,19 @@ use bevy::log::LogPlugin;
 use bevy::math::{ivec2, uvec2, vec2, vec3, Affine3A, Vec3Swizzles};
 use bevy::prelude::*;
 use bevy::render::extract_component::ExtractComponent;
+use bevy::render::primitives::Aabb;
 use bevy::render::render_resource::{Extent3d, FilterMode, TextureDimension, TextureFormat};
 use bevy::render::{Extract, RenderApp, RenderSet};
 use bevy::sprite::{ExtractedSprite, ExtractedSprites, SpriteSystem};
 use bevy::time::TimePlugin;
 use bevy::window::close_on_esc;
-use bevy_rapier2d::prelude::{RapierConfiguration, RapierPhysicsPlugin};
+use bevy_rapier2d::prelude::{RapierConfiguration, RapierContext, RapierPhysicsPlugin};
 use bevy_rapier2d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
 use self::entities::player::{depthRange, Player};
+use self::map::TilePos;
 
 #[linkme::distributed_slice]
 pub static setupApp: [fn(&mut App)] = [..];
@@ -87,6 +89,35 @@ pub fn isosprite_extract(
 	}
 }
 
+#[derive(Clone, Copy, Debug, Default, Component)]
+pub struct Interactible;
+
+#[derive(Clone, Debug)]
+pub struct InteractEvent {
+	source: Entity,
+	target: Entity,
+}
+
+pub fn find_interactible_entities(pos: Vec2, radius: f32, world: &World) -> Vec<Entity> {
+	assert!(radius > 0.0);
+
+	let pos = Vec3::from((pos, 0.0));
+	let aabb = Aabb::from_min_max(
+		pos + vec3(-radius, -radius, 0.0),
+		pos + vec3(radius, radius, 0.0),
+	);
+
+	let mut ents = vec![];
+	let rapier: &RapierContext = world.resource();
+	rapier.colliders_with_aabb_intersecting_aabb(aabb, |ent| {
+		if world.get::<Interactible>(ent).is_some() {
+			ents.push(ent);
+		}
+		true
+	});
+	ents
+}
+
 fn main() {
 	let mut app = App::new();
 
@@ -143,6 +174,8 @@ fn main() {
 			.after(SpriteSystem::ExtractSprites)
 			.in_schedule(ExtractSchedule),
 	);
+
+	app.add_event::<InteractEvent>();
 
 	app.add_system(close_on_esc);
 	app.add_startup_systems(

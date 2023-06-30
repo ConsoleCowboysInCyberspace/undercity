@@ -6,7 +6,7 @@ use rand::seq::{IteratorRandom, SliceRandom};
 use rand::thread_rng;
 
 use crate::map::{Tile, TilePos, TileType, Tileset, WallShape};
-use crate::{AResult, IsoSprite};
+use crate::{AResult, InteractEvent, Interactible, IsoSprite};
 
 #[derive(Component)]
 pub struct Door(Tile, Collider);
@@ -48,6 +48,7 @@ pub fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: T
 	cmd.spawn((
 		Door(tile, collider.clone()),
 		sprite,
+		Interactible,
 		RigidBody::Fixed,
 		collider,
 		CollisionGroups::default(),
@@ -57,7 +58,7 @@ pub fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: T
 
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
-	app.add_systems((update_doors, temp_toggle_doors));
+	app.add_systems((update_doors, handle_interactions));
 }
 
 fn update_doors(
@@ -70,7 +71,7 @@ fn update_doors(
 			&mut CollisionGroups,
 			&mut SolverGroups,
 		),
-		// Or<(Added<Door>, Changed<Door>)>
+		Or<(Added<Door>, Changed<Door>)>,
 	>,
 ) {
 	for (ent, door, mut sprite, mut collisionGroups, mut solverGroups) in query.iter_mut() {
@@ -99,25 +100,14 @@ fn update_doors(
 	}
 }
 
-fn temp_toggle_doors(
-	mut query: Query<&mut Door>,
-	time: Res<Time>,
-	mut last: Local<f32>,
-	mut indices: Local<Vec<usize>>,
-	mut index: Local<usize>,
+fn handle_interactions(
+	mut cmd: Commands,
+	mut doors: Query<&mut Door>,
+	mut interactions: EventReader<InteractEvent>,
 ) {
-	if query.is_empty() {
-		return;
+	for ev in interactions.iter() {
+		let door = ev.target;
+		let Ok(mut door) = doors.get_mut(door) else { continue; };
+		door.toggle();
 	}
-	if indices.is_empty() {
-		*indices = (0 .. query.iter().len()).collect();
-	}
-	if *index >= indices.len() {
-		indices.shuffle(&mut thread_rng());
-		*index = 0;
-	}
-
-	let mut door = query.iter_mut().nth(indices[*index]).unwrap();
-	door.toggle();
-	*index += 1;
 }
