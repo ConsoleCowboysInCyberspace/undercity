@@ -1,4 +1,4 @@
-use bevy::input::mouse::MouseMotion;
+use bevy::input::mouse::MouseWheel;
 use bevy::math::{vec2, vec3, Vec3Swizzles};
 use bevy::prelude::*;
 use bevy::render::primitives::Aabb;
@@ -154,12 +154,18 @@ fn move_camera(
 fn zoom_camera(
 	mut query: Query<&mut OrthographicProjection, With<Camera2d>>,
 	keyboard: Res<Input<KeyCode>>,
+	mut mouseWheel: EventReader<MouseWheel>,
 ) {
 	const step: f32 = 0.1;
 
-	let add = if keyboard.just_pressed(KeyCode::Equals) {
+	let mut scrollDelta = 0.0;
+	for ev in &mut mouseWheel {
+		scrollDelta += ev.y;
+	}
+
+	let add = if keyboard.just_pressed(KeyCode::Equals) || scrollDelta > 0.0 {
 		-step
-	} else if keyboard.just_pressed(KeyCode::Minus) {
+	} else if keyboard.just_pressed(KeyCode::Minus) || scrollDelta < 0.0 {
 		step
 	} else {
 		return;
