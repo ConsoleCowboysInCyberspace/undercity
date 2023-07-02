@@ -194,12 +194,14 @@ fn interact(world: &mut World) {
 	if keyboard.just_pressed(KeyCode::E) {
 		let mut cursor = world.query_filtered::<&Transform, With<Cursor>>();
 		let mut player = world.query_filtered::<Entity, With<Player>>();
-		let pos = cursor.single(&world).translation.xy();
-		let ents = find_interactible_entities(pos, 8.0, world);
+
+		let cursorPos = cursor.single(&world).translation.xy();
+		let player = player.single(&world);
+
+		let ents = find_interactible_entities(cursorPos, 8.0, world);
 		let Some(&target) = ents.first() else { return; };
-		world.send_event(InteractEvent {
-			source: player.single(&world),
-			target,
+		world.entity_mut(target).insert(InteractEvent {
+			source: player,
 		});
 	}
 }

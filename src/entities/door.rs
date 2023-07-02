@@ -79,18 +79,12 @@ fn update_doors(
 
 		let mut ent = cmd.entity(ent);
 		if door.is_open() {
-			ent.insert(Sensor);
-			// ent.insert(CollisionGroups::new(Group::ALL, Group::NONE));
-			// ent.remove::<Collider>();
 			ent.insert(ColliderDebugColor(Color::GREEN));
 			collisionGroups.memberships = Group::NONE;
 			collisionGroups.filters = Group::NONE;
 			solverGroups.memberships = Group::NONE;
 			solverGroups.filters = Group::NONE;
 		} else {
-			ent.remove::<Sensor>();
-			// ent.insert(CollisionGroups::new(Group::ALL, Group::ALL));
-			// ent.insert(door.1.clone());
 			ent.insert(ColliderDebugColor(Color::RED));
 			collisionGroups.memberships = Group::ALL;
 			collisionGroups.filters = Group::ALL;
@@ -102,12 +96,10 @@ fn update_doors(
 
 fn handle_interactions(
 	mut cmd: Commands,
-	mut doors: Query<&mut Door>,
-	mut interactions: EventReader<InteractEvent>,
+	mut doors: Query<(Entity, &mut Door), Added<InteractEvent>>,
 ) {
-	for ev in interactions.iter() {
-		let door = ev.target;
-		let Ok(mut door) = doors.get_mut(door) else { continue; };
+	for (ent, mut door) in &mut doors {
+		cmd.entity(ent).remove::<InteractEvent>();
 		door.toggle();
 	}
 }

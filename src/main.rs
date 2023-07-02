@@ -92,10 +92,9 @@ pub fn isosprite_extract(
 #[derive(Clone, Copy, Debug, Default, Component)]
 pub struct Interactible;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Component)]
 pub struct InteractEvent {
 	source: Entity,
-	target: Entity,
 }
 
 pub fn find_interactible_entities(pos: Vec2, radius: f32, world: &World) -> Vec<Entity> {
@@ -174,8 +173,6 @@ fn main() {
 			.after(SpriteSystem::ExtractSprites)
 			.in_schedule(ExtractSchedule),
 	);
-
-	app.add_event::<InteractEvent>();
 
 	app.add_system(close_on_esc);
 	app.add_startup_systems(
