@@ -5,7 +5,7 @@ use bevy_rapier2d::render::ColliderDebugColor;
 use rand::seq::{IteratorRandom, SliceRandom};
 use rand::thread_rng;
 
-use crate::map::{Tile, TilePos, TileType, Tileset, WallShape};
+use crate::map::{FloorType, Map, Tile, TilePos, TileType, Tileset, WallShape};
 use crate::{AResult, InteractEvent, Interactible, IsoSprite};
 
 #[derive(Component)]
@@ -28,7 +28,7 @@ impl Door {
 	}
 }
 
-pub fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: Tile) {
+fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: Tile) {
 	assert!(matches!(
 		tile.ty,
 		TileType::DoorNS { .. } | TileType::DoorEW { .. }
@@ -59,6 +59,21 @@ pub fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: T
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
 	app.add_systems((update_doors, handle_interactions));
+}
+
+#[linkme::distributed_slice(crate::setupMap)]
+fn setup_map(map: &mut Map, cmd: &mut Commands, assets: &AssetServer) {
+	let mut doors = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+		pair.is_door()
+	});
+	doors.extend(
+		map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+			pair.is_door()
+		}),
+	);
+	for (pos, tile) in doors {
+		make_door(cmd, &assets, pos, tile);
+	}
 }
 
 fn update_doors(

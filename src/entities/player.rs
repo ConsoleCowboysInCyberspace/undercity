@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use bevy::render::primitives::Aabb;
 use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng, seq::SliceRandom};
 
-use crate::map::{tileDiameter, tileRadius, Landmark, Tile, TileType};
+use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, Map, Tile, TileType};
 use crate::{find_interactible_entities, world_to_iso, InteractEvent, IsoSprite, IsoSpriteBundle};
 
 pub const depthRange: f32 = 1_000_000.0;
@@ -27,6 +27,25 @@ fn setup_app(app: &mut App) {
 		move_cursor,
 		interact.after(move_cursor),
 	));
+}
+
+#[linkme::distributed_slice(crate::setupMap)]
+fn setup_map(map: &mut Map, cmd: &mut Commands, assets: &AssetServer) {
+	let playerSpawns = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+		matches!(
+			pair.foreground.ty,
+			TileType::Landmark {
+				ty: Landmark::SpawnPlayer,
+				..
+			}
+		)
+	});
+	// FIXME: use map rng
+	let playerSpawn = playerSpawns.choose(&mut thread_rng()).unwrap().0;
+	cmd.add(move |world: &mut World| {
+		let mut query = world.query_filtered::<&mut Transform, With<Player>>();
+		query.single_mut(world).translation = (playerSpawn.as_vec2() * tileRadius, 0.0).into();
+	});
 }
 
 pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {

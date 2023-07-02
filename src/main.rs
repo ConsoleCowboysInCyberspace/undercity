@@ -27,6 +27,9 @@ use self::map::TilePos;
 #[linkme::distributed_slice]
 pub static setupApp: [fn(&mut App)] = [..];
 
+#[linkme::distributed_slice]
+pub static setupMap: [fn(&mut map::Map, &mut Commands, &AssetServer)] = [..];
+
 #[derive(Clone, Debug, Default, Component)]
 pub struct IsoSprite {
 	pub rect: Rect,
@@ -193,29 +196,10 @@ fn setup_map(
 
 	let (mut map, mut rng) = map::gen::generate_map(0);
 
-	let mut doors = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
-		pair.is_door()
-	});
-	doors.extend(
-		map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
-			pair.is_door()
-		}),
-	);
-	for (pos, tile) in doors {
-		entities::door::make_door(&mut cmd, &assets, pos, tile);
-	}
 
-	let playerSpawns = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
-		matches!(
-			pair.foreground.ty,
-			TileType::Landmark {
-				ty: Landmark::SpawnPlayer,
-				..
-			}
-		)
-	});
-	let playerSpawn = playerSpawns.choose(&mut rng).unwrap().0;
-	playerQuery.single_mut().translation = (playerSpawn.as_vec2() * tileRadius, 0.0).into();
+	for func in setupMap {
+		func(&mut map, &mut cmd, &assets);
+	}
 
 	map.into_entities(&mut cmd, &assets);
 }
