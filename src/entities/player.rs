@@ -190,13 +190,20 @@ fn move_cursor(
 }
 
 fn interact(world: &mut World) {
+	const reachDistance: f32 = tileDiameter * 0.75;
+
 	let keyboard: &Input<KeyCode> = world.resource();
 	if keyboard.just_pressed(KeyCode::E) {
 		let mut cursor = world.query_filtered::<&Transform, With<Cursor>>();
-		let mut player = world.query_filtered::<Entity, With<Player>>();
+		let mut player = world.query_filtered::<(Entity, &Transform), With<Player>>();
 
 		let cursorPos = cursor.single(&world).translation.xy();
-		let player = player.single(&world);
+		let (player, plyPos) = player.single(&world);
+		let plyPos = plyPos.translation.xy();
+
+		if cursorPos.distance_squared(plyPos) > reachDistance.powf(2.0) {
+			return;
+		}
 
 		let ents = find_interactible_entities(cursorPos, 8.0, world);
 		let Some(&target) = ents.first() else { return; };
