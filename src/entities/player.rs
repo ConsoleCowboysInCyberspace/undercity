@@ -157,6 +157,8 @@ fn zoom_camera(
 	mut mouseWheel: EventReader<MouseWheel>,
 ) {
 	const step: f32 = 0.1;
+	const min: f32 = 0.1;
+	const max: f32 = 2.5;
 
 	let mut scrollDelta = 0.0;
 	for ev in &mut mouseWheel {
@@ -171,7 +173,7 @@ fn zoom_camera(
 		return;
 	};
 	let mut projection = query.single_mut();
-	projection.scale = (projection.scale.ln() + add).exp();
+	projection.scale = (projection.scale.ln() + add).exp().clamp(min, max);
 }
 
 fn move_cursor(
