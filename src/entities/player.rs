@@ -7,6 +7,7 @@ use bevy_rapier2d::prelude::*;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
+use super::Health;
 use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, Map, Tile, TileType};
 use crate::{find_interactible_entities, world_to_iso, InteractEvent, IsoSprite, IsoSpriteBundle};
 
@@ -61,6 +62,7 @@ pub fn startup(mut cmd: Commands, assets: Res<AssetServer>) {
 	let texture = assets.load(texture);
 	cmd.spawn((
 		Player,
+		Health::new(100.0),
 		IsoSpriteBundle {
 			texture: texture.clone(),
 			sprite: IsoSprite {

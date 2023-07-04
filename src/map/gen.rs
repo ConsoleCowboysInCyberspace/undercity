@@ -223,6 +223,28 @@ fn generate_room(rng: &MapRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 		rect.max,
 	);
 
+	// place a shrine
+	let shrineType = [
+		Landmark::ShrineIdol,
+		Landmark::ShrineSkulls,
+		// Landmark::ShrineScroll,
+	]
+	.choose(&mut *rng.as_mut())
+	.copied()
+	.unwrap();
+	let shrinePos = {
+		let x = rng.as_mut().gen_range(rect.min.x + 1 .. rect.max.x);
+		let y = rng.as_mut().gen_range(rect.min.y + 1 .. rect.max.y);
+		TilePos::of(x, y)
+	};
+	res[shrinePos].set(Tile {
+		ty: TileType::Landmark {
+			ty: shrineType,
+			flip: rng.as_mut().gen_bool(0.5),
+		},
+		..default()
+	});
+
 	// place doors
 	let mut doors = vec![];
 	let numDoors = rng.as_mut().gen_range(1 ..= 4);
