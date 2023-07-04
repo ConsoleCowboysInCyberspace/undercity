@@ -48,7 +48,7 @@ impl TileRect {
 	}
 }
 
-pub fn generate_map(seed: u64) -> (Map, SmallRng) {
+pub fn generate_map(seed: u64) -> Map {
 	let mut rng = SmallRng::seed_from_u64(seed);
 
 	let mut allRects = vec![];
@@ -71,7 +71,8 @@ pub fn generate_map(seed: u64) -> (Map, SmallRng) {
 		queue.push_back((depth + 1, !xAxis, r));
 	}
 
-	let mut res = Map::new();
+	let rng = MapRng::new(rng);
+	let mut res = Map::from_rng(&rng);
 
 	// fill hallway floors
 	for rect in allRects {
@@ -88,13 +89,13 @@ pub fn generate_map(seed: u64) -> (Map, SmallRng) {
 	// generate rooms
 	let mut doors = vec![];
 	for mut rect in roomRects.iter().copied() {
-		let borderSize = rng.gen_range(3 .. 7);
+		let borderSize = rng.as_mut().gen_range(3 .. 7);
 		*rect.min += IVec2::splat(borderSize);
 		*rect.max -= IVec2::splat(borderSize);
 
 		let mut trect = rect;
 		trect.translate(-*rect.min);
-		let (room, roomDoors) = generate_room(&mut rng, trect);
+		let (room, roomDoors) = generate_room(&rng, trect);
 		res.copy_from(&room, rect.min);
 		doors.extend(roomDoors.into_iter().map(|p| TilePos::from(*p + *rect.min)));
 	}
@@ -152,11 +153,10 @@ pub fn generate_map(seed: u64) -> (Map, SmallRng) {
 	// place player spawnpoints
 	let mut spawns = 0;
 	for _ in 0 .. 1000 {
-		let room = roomRects.choose(&mut rng).unwrap();
-		let pos = TilePos::of(
-			rng.gen_range(room.min.x ..= room.max.x),
-			rng.gen_range(room.min.y ..= room.max.y),
-		);
+		let room = roomRects.choose(&mut *rng.as_mut()).unwrap();
+		let x = rng.as_mut().gen_range(room.min.x ..= room.max.x);
+		let y = rng.as_mut().gen_range(room.min.y ..= room.max.y);
+		let pos = TilePos::of(x, y);
 
 		if !res[pos].is_floor() {
 			continue;
@@ -172,11 +172,11 @@ pub fn generate_map(seed: u64) -> (Map, SmallRng) {
 		}
 	}
 
-	(res, rng)
+	res
 }
 
-fn generate_room(rng: &mut SmallRng, rect: TileRect) -> (Map, Vec<TilePos>) {
-	let tilesets = [
+fn generate_room(rng: &MapRng, rect: TileRect) -> (Map, Vec<TilePos>) {
+	const tilesets: &[Tileset] = [
 		Tileset::BrickBlue,
 		Tileset::BrickCyan,
 		Tileset::BrickGreen,
@@ -201,10 +201,10 @@ fn generate_room(rng: &mut SmallRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 		Tileset::PandemYellow,
 		Tileset::Rock,
 		Tileset::Tunnel,
-	];
+	].as_slice();
 
-	let mut res = Map::new();
-	let tileset = *tilesets.choose(rng).unwrap();
+	let mut res = Map::new(None);
+	let tileset = *tilesets.choose(&mut *rng.as_mut()).unwrap();
 	res.fill(
 		Tile {
 			ty: TileType::Floor(FloorType::Tileset),
@@ -224,9 +224,10 @@ fn generate_room(rng: &mut SmallRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 
 	// place doors
 	let mut doors = vec![];
-	for _ in 0 .. rng.gen_range(1 ..= 4) {
+	let numDoors = rng.as_mut().gen_range(1 ..= 4);
+	for _ in 0 .. numDoors {
 		'placing: for _ in 0 .. 1000 {
-			let pos = rect.tile_on_border(rng);
+			let pos = rect.tile_on_border(&mut *rng.as_mut());
 			for neighbor in pos.von_neumann_neighborhood() {
 				if res[neighbor].is_door() {
 					continue 'placing;

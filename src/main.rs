@@ -194,8 +194,7 @@ fn setup_map(
 ) {
 	use crate::map::*;
 
-	let (mut map, mut rng) = map::gen::generate_map(0);
-
+	let mut map = map::gen::generate_map(0);
 
 	for func in setupMap {
 		func(&mut map, &mut cmd, &assets);

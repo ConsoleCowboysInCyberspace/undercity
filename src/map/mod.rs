@@ -1,14 +1,17 @@
 pub mod data;
 pub mod gen;
 
+use std::cell::{RefCell, RefMut};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::rc::Rc;
 
 use bevy::math::{ivec2, uvec2, vec2};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
-use rand::{thread_rng, Rng};
+use rand::rngs::SmallRng;
+use rand::{thread_rng, Rng, SeedableRng};
 
 pub use self::data::*;
 use crate::{IsoSprite, IsoSpriteBundle};
@@ -231,13 +234,36 @@ impl Debug for Chunk {
 }
 
 #[derive(Clone, Debug)]
+pub struct MapRng(Rc<RefCell<SmallRng>>);
+
+impl MapRng {
+    pub fn new(rng: SmallRng) -> Self {
+        Self(Rc::new(RefCell::new(rng)))
+    }
+
+	pub fn as_mut(&self) -> RefMut<'_, SmallRng> {
+		self.0.borrow_mut()
+	}
+}
+
+#[derive(Clone, Debug)]
 pub struct Map {
+	pub rng: MapRng,
 	pub chunks: HashMap<ChunkPos, Chunk>,
 }
 
 impl Map {
-	pub fn new() -> Self {
+	pub fn new(seed: Option<u64>) -> Self {
+		let seed = seed.unwrap_or_else(|| thread_rng().gen());
 		Self {
+			rng: MapRng::new(SmallRng::seed_from_u64(seed)),
+			chunks: HashMap::new(),
+		}
+	}
+
+	pub fn from_rng(rng: &MapRng) -> Self {
+		Self {
+			rng: rng.clone(),
 			chunks: HashMap::new(),
 		}
 	}
@@ -255,6 +281,10 @@ impl Map {
 		for (pos, tile) in tiles {
 			tile.into_entity(pos, cmd, assets);
 		}
+	}
+
+	pub fn rng(&self) -> RefMut<'_, SmallRng> {
+		self.rng.as_mut()
 	}
 
 	/// Returns minimum/maximum positions of chunks that are nonempty.
