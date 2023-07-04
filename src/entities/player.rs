@@ -4,7 +4,8 @@ use bevy::prelude::*;
 use bevy::render::primitives::Aabb;
 use bevy::window::PrimaryWindow;
 use bevy_rapier2d::prelude::*;
-use rand::{thread_rng, Rng, seq::SliceRandom};
+use rand::seq::SliceRandom;
+use rand::{thread_rng, Rng};
 
 use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, Map, Tile, TileType};
 use crate::{find_interactible_entities, world_to_iso, InteractEvent, IsoSprite, IsoSpriteBundle};
@@ -234,8 +235,8 @@ fn interact(world: &mut World) {
 
 		let ents = find_interactible_entities(cursorPos, 8.0, world);
 		let Some(&target) = ents.first() else { return; };
-		world.entity_mut(target).insert(InteractEvent {
-			source: player,
-		});
+		world
+			.entity_mut(target)
+			.insert(InteractEvent { source: player });
 	}
 }

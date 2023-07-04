@@ -237,9 +237,9 @@ impl Debug for Chunk {
 pub struct MapRng(Rc<RefCell<SmallRng>>);
 
 impl MapRng {
-    pub fn new(rng: SmallRng) -> Self {
-        Self(Rc::new(RefCell::new(rng)))
-    }
+	pub fn new(rng: SmallRng) -> Self {
+		Self(Rc::new(RefCell::new(rng)))
+	}
 
 	pub fn as_mut(&self) -> RefMut<'_, SmallRng> {
 		self.0.borrow_mut()

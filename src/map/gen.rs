@@ -201,7 +201,8 @@ fn generate_room(rng: &MapRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 		Tileset::PandemYellow,
 		Tileset::Rock,
 		Tileset::Tunnel,
-	].as_slice();
+	]
+	.as_slice();
 
 	let mut res = Map::new(None);
 	let tileset = *tilesets.choose(&mut *rng.as_mut()).unwrap();
