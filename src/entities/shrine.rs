@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::{Collider, RigidBody};
 
+use super::player::Player;
+use super::Health;
 use crate::map::{tileRadius, FloorType, Landmark, Map, TileType};
 use crate::{InteractEvent, Interactible, IsoSpriteBundle};
-
-use super::Health;
-use super::player::Player;
 
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]

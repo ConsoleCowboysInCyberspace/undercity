@@ -1,3 +1,6 @@
+use std::f32::consts::PI;
+use std::fmt::Write;
+
 use bevy::input::mouse::MouseWheel;
 use bevy::math::{vec2, vec3, Vec3Swizzles};
 use bevy::prelude::*;
@@ -21,13 +24,14 @@ pub struct Cursor;
 
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
-	app.add_startup_system(startup);
+	app.add_startup_systems((startup, startup_gui));
 	app.add_systems((
 		move_player,
 		move_camera.after(move_player),
 		zoom_camera,
 		move_cursor,
 		interact.after(move_cursor),
+		update_gui,
 	));
 }
 
@@ -240,5 +244,91 @@ fn interact(world: &mut World) {
 		world
 			.entity_mut(target)
 			.insert(InteractEvent { source: player });
+	}
+}
+
+#[derive(Component)]
+struct HealthBarRect;
+
+#[derive(Component)]
+struct HealthBarText;
+
+fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
+	let (width, height) = (200.0, 50.0);
+
+	cmd.spawn(NodeBundle {
+		style: Style {
+			size: Size::new(Val::Px(width), Val::Px(height)),
+			align_items: AlignItems::Center,
+			justify_content: JustifyContent::Center,
+			position_type: PositionType::Absolute,
+			position: UiRect {
+				bottom: Val::Px(10.0),
+				left: Val::Px(10.0),
+				..default()
+			},
+			..default()
+		},
+		background_color: BackgroundColor(Color::GRAY),
+		..default()
+	})
+	.with_children(|parent| {
+		parent.spawn((
+			HealthBarRect,
+			NodeBundle {
+				style: Style {
+					size: Size::new(Val::Px(width), Val::Px(height - 5.0)),
+					position_type: PositionType::Absolute,
+					position: UiRect {
+						top: Val::Px(2.5),
+						left: Val::Percent(0.0),
+						..default()
+					},
+					..default()
+				},
+				background_color: BackgroundColor(Color::RED),
+				..default()
+			},
+		));
+
+		parent.spawn((
+			HealthBarText,
+			TextBundle {
+				text: Text::from_section(
+					"-",
+					TextStyle {
+						font: assets.load("fonts/RedHatDisplay.ttf"),
+						font_size: 48.0,
+						color: Color::WHITE,
+					},
+				),
+				style: Style {
+					size: Size::new(Val::Auto, Val::Px(height)),
+					position_type: PositionType::Absolute,
+					position: UiRect {
+						top: Val::Percent(0.0),
+						..default()
+					},
+					align_self: AlignSelf::Center,
+					..default()
+				},
+				..default()
+			},
+		));
+	});
+}
+
+fn update_gui(
+	health: Query<&Health, (With<Player>, Changed<Health>)>,
+	mut rect: Query<&mut Style, With<HealthBarRect>>,
+	mut text: Query<&mut Text, With<HealthBarText>>,
+	time: Res<Time>,
+) {
+	for &Health(health) in &health {
+		rect.single_mut().size.width = Val::Percent(health);
+
+		let text = &mut text.single_mut().sections[0].value;
+		text.clear();
+		write!(text, "{health:.0}").unwrap();
 	}
 }
