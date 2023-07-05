@@ -275,18 +275,21 @@ impl Map {
 	/// Returns minimum/maximum positions of tiles that are nonempty.
 	pub fn used_tiles(&self) -> TileRect {
 		let (minChunk, maxChunk) = self.used_chunks();
-		let (startTile, endTile) = (minChunk.min_tile(), maxChunk.max_tile());
+		let borderChunks = (minChunk.x ..= maxChunk.x)
+			.map(|x| ChunkPos::of(x, minChunk.y))
+			.chain((minChunk.x ..= maxChunk.x).map(|x| ChunkPos::of(x, maxChunk.y)))
+			.chain((minChunk.y + 1 ..= maxChunk.y - 1).map(|y| ChunkPos::of(minChunk.x, y)))
+			.chain((minChunk.y + 1 ..= maxChunk.y - 1).map(|y| ChunkPos::of(maxChunk.x, y)));
 
 		let mut min = TilePos::of(i32::MAX, i32::MAX);
 		let mut max = TilePos::of(i32::MIN, i32::MIN);
-		for y in startTile.y ..= endTile.y {
-			for x in startTile.x ..= endTile.x {
-				let v = TilePos::of(x, y);
-				if self[v].is_empty() {
-					continue;
+		for chunkPos in borderChunks {
+			let chunk = &self[chunkPos];
+			for (tile, tilePos) in chunk.tiles.iter().zip(chunk.tile_positions()) {
+				if !tile.is_empty() {
+					*min = min.min(*tilePos);
+					*max = max.max(*tilePos);
 				}
-				*min = min.min(*v);
-				*max = max.max(*v);
 			}
 		}
 		TileRect::new_presorted(min, max)
