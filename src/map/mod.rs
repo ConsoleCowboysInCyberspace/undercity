@@ -246,45 +246,16 @@ impl MapRng {
 	}
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Resource)]
 pub struct Map {
-	pub rng: MapRng,
 	pub chunks: HashMap<ChunkPos, Chunk>,
 }
 
 impl Map {
-	pub fn new(seed: Option<u64>) -> Self {
-		let seed = seed.unwrap_or_else(|| thread_rng().gen());
+	pub fn new() -> Self {
 		Self {
-			rng: MapRng::new(SmallRng::seed_from_u64(seed)),
 			chunks: HashMap::new(),
 		}
-	}
-
-	pub fn from_rng(rng: &MapRng) -> Self {
-		Self {
-			rng: rng.clone(),
-			chunks: HashMap::new(),
-		}
-	}
-
-	pub fn into_entities(self, cmd: &mut Commands, assets: &AssetServer) {
-		let tiles = self
-			.chunks
-			.into_iter()
-			.flat_map(|(pos, chunk)| {
-				chunk
-					.tile_positions()
-					.map(move |pos| (pos, chunk.tiles[pos.chunk_relative().chunk_index()]))
-			})
-			.filter(|(_, pair)| !pair.is_empty());
-		for (pos, tile) in tiles {
-			tile.into_entity(pos, cmd, assets);
-		}
-	}
-
-	pub fn rng(&self) -> RefMut<'_, SmallRng> {
-		self.rng.as_mut()
 	}
 
 	/// Returns minimum/maximum positions of chunks that are nonempty.
@@ -319,6 +290,98 @@ impl Map {
 			}
 		}
 		TileRect::new_presorted(min, max)
+	}
+}
+
+impl Index<ChunkPos> for Map {
+	type Output = Chunk;
+
+	fn index(&self, pos: ChunkPos) -> &Self::Output {
+		static ghostChunk: Chunk = Chunk::new(ChunkPos::of(i32::MAX, i32::MAX));
+		self.chunks.get(&pos).unwrap_or(&ghostChunk)
+	}
+}
+
+impl IndexMut<ChunkPos> for Map {
+	fn index_mut(&mut self, pos: ChunkPos) -> &mut Self::Output {
+		self.chunks.entry(pos).or_insert_with(|| Chunk::new(pos))
+	}
+}
+
+impl Index<TilePos> for Map {
+	type Output = TilePair;
+
+	fn index(&self, index: TilePos) -> &Self::Output {
+		let chunkPos = ChunkPos::from(index);
+		let chunk = &self[chunkPos];
+		let index = index.chunk_relative();
+		&chunk.tiles[index.chunk_index()]
+	}
+}
+
+impl IndexMut<TilePos> for Map {
+	fn index_mut(&mut self, index: TilePos) -> &mut Self::Output {
+		let chunkPos = ChunkPos::from(index);
+		let chunk = &mut self[chunkPos];
+		let index = index.chunk_relative();
+		&mut chunk.tiles[index.chunk_index()]
+	}
+}
+
+impl Index<(i32, i32)> for Map {
+	type Output = TilePair;
+
+	fn index(&self, (x, y): (i32, i32)) -> &Self::Output {
+		&self[TilePos::of(x, y)]
+	}
+}
+
+impl IndexMut<(i32, i32)> for Map {
+	fn index_mut(&mut self, (x, y): (i32, i32)) -> &mut Self::Output {
+		&mut self[TilePos::of(x, y)]
+	}
+}
+
+#[derive(Clone, Debug)]
+pub struct MutMap {
+	pub map: Map,
+	pub rng: MapRng,
+}
+
+impl MutMap {
+	pub fn new(seed: Option<u64>) -> Self {
+		let seed = seed.unwrap_or_else(|| thread_rng().gen());
+		Self {
+			rng: MapRng::new(SmallRng::seed_from_u64(seed)),
+			map: Map::new(),
+		}
+	}
+
+	pub fn from_rng(rng: &MapRng) -> Self {
+		Self {
+			rng: rng.clone(),
+			map: Map::new(),
+		}
+	}
+
+	pub fn into_entities(self, cmd: &mut Commands, assets: &AssetServer) {
+		let tiles = self
+			.map
+			.chunks
+			.into_iter()
+			.flat_map(|(pos, chunk)| {
+				chunk
+					.tile_positions()
+					.map(move |pos| (pos, chunk.tiles[pos.chunk_relative().chunk_index()]))
+			})
+			.filter(|(_, pair)| !pair.is_empty());
+		for (pos, tile) in tiles {
+			tile.into_entity(pos, cmd, assets);
+		}
+	}
+
+	pub fn rng(&self) -> RefMut<'_, SmallRng> {
+		self.rng.as_mut()
 	}
 
 	/// Copies all of `other` into `self`, with `other`'s min [`used_tiles`]
@@ -412,51 +475,16 @@ impl Map {
 	}
 }
 
-impl Index<ChunkPos> for Map {
-	type Output = Chunk;
+impl Deref for MutMap {
+	type Target = Map;
 
-	fn index(&self, pos: ChunkPos) -> &Self::Output {
-		static ghostChunk: Chunk = Chunk::new(ChunkPos::of(i32::MAX, i32::MAX));
-		self.chunks.get(&pos).unwrap_or(&ghostChunk)
+	fn deref(&self) -> &Self::Target {
+		&self.map
 	}
 }
 
-impl IndexMut<ChunkPos> for Map {
-	fn index_mut(&mut self, pos: ChunkPos) -> &mut Self::Output {
-		self.chunks.entry(pos).or_insert_with(|| Chunk::new(pos))
-	}
-}
-
-impl Index<TilePos> for Map {
-	type Output = TilePair;
-
-	fn index(&self, index: TilePos) -> &Self::Output {
-		let chunkPos = ChunkPos::from(index);
-		let chunk = &self[chunkPos];
-		let index = index.chunk_relative();
-		&chunk.tiles[index.chunk_index()]
-	}
-}
-
-impl IndexMut<TilePos> for Map {
-	fn index_mut(&mut self, index: TilePos) -> &mut Self::Output {
-		let chunkPos = ChunkPos::from(index);
-		let chunk = &mut self[chunkPos];
-		let index = index.chunk_relative();
-		&mut chunk.tiles[index.chunk_index()]
-	}
-}
-
-impl Index<(i32, i32)> for Map {
-	type Output = TilePair;
-
-	fn index(&self, (x, y): (i32, i32)) -> &Self::Output {
-		&self[TilePos::of(x, y)]
-	}
-}
-
-impl IndexMut<(i32, i32)> for Map {
-	fn index_mut(&mut self, (x, y): (i32, i32)) -> &mut Self::Output {
-		&mut self[TilePos::of(x, y)]
+impl DerefMut for MutMap {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.map
 	}
 }

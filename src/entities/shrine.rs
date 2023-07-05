@@ -3,7 +3,7 @@ use bevy_rapier2d::prelude::{Collider, RigidBody};
 
 use super::player::Player;
 use super::Health;
-use crate::map::{tileRadius, FloorType, Landmark, Map, TileType};
+use crate::map::{tileRadius, FloorType, Landmark, Map, MutMap, TileType};
 use crate::{InteractEvent, Interactible, IsoSpriteBundle};
 
 #[derive(Clone, Copy, Debug)]
@@ -34,7 +34,7 @@ fn setup_app(app: &mut App) {
 }
 
 #[linkme::distributed_slice(crate::setupMap)]
-fn setup_map(map: &mut Map, cmd: &mut Commands, assets: &AssetServer) {
+fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
 	const radius: f32 = tileRadius / 2.0 * 0.9;
 	let collider = Collider::cuboid(radius, radius);
 
@@ -65,6 +65,7 @@ fn handle_interactions(
 	mut cmd: Commands,
 	mut shrines: Query<(Entity, &InteractEvent, &Shrine), Added<InteractEvent>>,
 	mut player: Query<&mut Health, With<Player>>,
+	map: Res<Map>,
 ) {
 	for (shrineEnt, ev, shrine) in &mut shrines {
 		cmd.entity(shrineEnt).remove::<InteractEvent>();

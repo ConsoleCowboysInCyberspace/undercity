@@ -48,7 +48,7 @@ impl TileRect {
 	}
 }
 
-pub fn generate_map(seed: u64) -> Map {
+pub fn generate_map(seed: u64) -> MutMap {
 	let mut rng = SmallRng::seed_from_u64(seed);
 
 	let mut allRects = vec![];
@@ -72,7 +72,7 @@ pub fn generate_map(seed: u64) -> Map {
 	}
 
 	let rng = MapRng::new(rng);
-	let mut res = Map::from_rng(&rng);
+	let mut res = MutMap::from_rng(&rng);
 
 	// fill hallway floors
 	for rect in allRects {
@@ -175,7 +175,7 @@ pub fn generate_map(seed: u64) -> Map {
 	res
 }
 
-fn generate_room(rng: &MapRng, rect: TileRect) -> (Map, Vec<TilePos>) {
+fn generate_room(rng: &MapRng, rect: TileRect) -> (MutMap, Vec<TilePos>) {
 	const tilesets: &[Tileset] = [
 		Tileset::BrickBlue,
 		Tileset::BrickCyan,
@@ -204,7 +204,7 @@ fn generate_room(rng: &MapRng, rect: TileRect) -> (Map, Vec<TilePos>) {
 	]
 	.as_slice();
 
-	let mut res = Map::new(None);
+	let mut res = MutMap::new(None);
 	let tileset = *tilesets.choose(&mut *rng.as_mut()).unwrap();
 	res.fill(
 		Tile {

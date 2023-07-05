@@ -11,7 +11,7 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
 use super::Health;
-use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, Map, Tile, TileType};
+use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, MutMap, Tile, TileType};
 use crate::{find_interactible_entities, world_to_iso, InteractEvent, IsoSprite, IsoSpriteBundle};
 
 pub const depthRange: f32 = 1_000_000.0;
@@ -36,7 +36,7 @@ fn setup_app(app: &mut App) {
 }
 
 #[linkme::distributed_slice(crate::setupMap)]
-fn setup_map(map: &mut Map, cmd: &mut Commands, assets: &AssetServer) {
+fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
 	let playerSpawns = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
 		matches!(
 			pair.foreground.ty,

@@ -5,7 +5,7 @@ use bevy_rapier2d::render::ColliderDebugColor;
 use rand::seq::{IteratorRandom, SliceRandom};
 use rand::thread_rng;
 
-use crate::map::{FloorType, Map, Tile, TilePos, TileType, Tileset, WallShape};
+use crate::map::{FloorType, MutMap, Tile, TilePos, TileType, Tileset, WallShape};
 use crate::{AResult, InteractEvent, Interactible, IsoSprite};
 
 #[derive(Component)]
@@ -62,7 +62,7 @@ fn setup_app(app: &mut App) {
 }
 
 #[linkme::distributed_slice(crate::setupMap)]
-fn setup_map(map: &mut Map, cmd: &mut Commands, assets: &AssetServer) {
+fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
 	let mut doors = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
 		pair.is_door()
 	});

@@ -28,7 +28,7 @@ use self::map::TilePos;
 pub static setupApp: [fn(&mut App)] = [..];
 
 #[linkme::distributed_slice]
-pub static setupMap: [fn(&mut map::Map, &mut Commands, &AssetServer)] = [..];
+pub static setupMap: [fn(&mut map::MutMap, &mut Commands, &AssetServer)] = [..];
 
 #[derive(Clone, Debug, Default, Component)]
 pub struct IsoSprite {
