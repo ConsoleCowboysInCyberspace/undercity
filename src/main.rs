@@ -200,7 +200,8 @@ fn setup_map(
 		func(&mut map, &mut cmd, &assets);
 	}
 
-	map.into_entities(&mut cmd, &assets);
+	let map = map.into_entities(&mut cmd, &assets);
+	cmd.insert_resource(map);
 }
 
 fn toggle_rapier_debug(keyboard: Res<Input<KeyCode>>, mut ctx: ResMut<DebugRenderContext>) {

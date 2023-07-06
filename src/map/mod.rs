@@ -367,11 +367,10 @@ impl MutMap {
 		}
 	}
 
-	pub fn into_entities(self, cmd: &mut Commands, assets: &AssetServer) {
+	pub fn into_entities(self, cmd: &mut Commands, assets: &AssetServer) -> Map {
 		let tiles = self
-			.map
 			.chunks
-			.into_iter()
+			.iter()
 			.flat_map(|(pos, chunk)| {
 				chunk
 					.tile_positions()
@@ -381,6 +380,8 @@ impl MutMap {
 		for (pos, tile) in tiles {
 			tile.into_entity(pos, cmd, assets);
 		}
+
+		self.map
 	}
 
 	pub fn rng(&self) -> RefMut<'_, SmallRng> {
