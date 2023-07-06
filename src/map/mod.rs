@@ -2,7 +2,7 @@ pub mod data;
 pub mod gen;
 
 use std::cell::{RefCell, RefMut};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::rc::Rc;
@@ -293,6 +293,40 @@ impl Map {
 			}
 		}
 		TileRect::new_presorted(min, max)
+	}
+
+	pub fn find_tile(
+		&self,
+		position: TilePos,
+		mut predicate: impl FnMut(TilePos, &TilePair) -> bool,
+	) -> Option<TilePos> {
+		let (minChunk, maxChunk) = self.used_chunks();
+		let chunksX = (minChunk.x ..= maxChunk.x);
+		let chunksY = (minChunk.y ..= maxChunk.y);
+
+		let mut enqueued = HashSet::new();
+		let mut queue = VecDeque::new();
+		enqueued.insert(position);
+		queue.push_back(position);
+		while !queue.is_empty() {
+			let tile = queue.pop_front().unwrap();
+
+			if predicate(tile, &self[tile]) {
+				return Some(tile);
+			}
+
+			for other in tile.moore_neighborhood() {
+				let chunk = ChunkPos::from(other);
+				let outOfBounds = !(chunksX.contains(&chunk.x) && chunksY.contains(&chunk.y));
+				if outOfBounds || enqueued.contains(&other) {
+					continue;
+				}
+
+				enqueued.insert(other);
+				queue.push_back(other);
+			}
+		}
+		None
 	}
 }
 

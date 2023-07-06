@@ -1,9 +1,11 @@
+use bevy::math::Vec3Swizzles;
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::{Collider, RigidBody};
+use rand::{thread_rng, Rng};
 
 use super::player::Player;
 use super::Health;
-use crate::map::{tileRadius, FloorType, Landmark, Map, MutMap, TileType};
+use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, Map, MutMap, TilePos, TileType};
 use crate::{InteractEvent, Interactible, IsoSpriteBundle};
 
 #[derive(Clone, Copy, Debug)]
@@ -11,7 +13,7 @@ use crate::{InteractEvent, Interactible, IsoSpriteBundle};
 pub enum ShrineType {
 	Heal,
 	Damage,
-	// Blink, // requires keeping `Map`s around?
+	Blink,
 }
 
 impl From<Landmark> for ShrineType {
@@ -19,7 +21,7 @@ impl From<Landmark> for ShrineType {
 		match landmark {
 			Landmark::ShrineIdol => Self::Heal,
 			Landmark::ShrineSkulls => Self::Damage,
-			// Landmark::ShrineScroll => Self::Blink,
+			Landmark::ShrineScroll => Self::Blink,
 			_ => panic!("no shrine for landmark {landmark:?}"),
 		}
 	}
@@ -64,17 +66,29 @@ fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
 fn handle_interactions(
 	mut cmd: Commands,
 	mut shrines: Query<(Entity, &InteractEvent, &Shrine), Added<InteractEvent>>,
-	mut player: Query<&mut Health, With<Player>>,
+	mut player: Query<(&mut Transform, &mut Health), With<Player>>,
 	map: Res<Map>,
 ) {
 	for (shrineEnt, ev, shrine) in &mut shrines {
 		cmd.entity(shrineEnt).remove::<InteractEvent>();
 		match shrine.0 {
 			ShrineType::Heal => {
-				player.single_mut().take_healing(25.0);
+				player.single_mut().1.take_healing(25.0);
 			},
 			ShrineType::Damage => {
-				player.single_mut().take_damage(10.0);
+				player.single_mut().1.take_damage(10.0);
+			},
+			ShrineType::Blink => {
+				let transform = &mut player.single_mut().0;
+				let usedTiles = map.used_tiles();
+				let pos = {
+					let x = thread_rng().gen_range(usedTiles.min.x ..= usedTiles.max.x);
+					let y = thread_rng().gen_range(usedTiles.min.y ..= usedTiles.max.y);
+					TilePos::of(x, y)
+				};
+				let Some(newPos) = map.find_tile(pos, |_, tile| tile.is_floor()) else { continue };
+				transform.translation =
+					(newPos.as_vec2() * tileRadius, transform.translation.z).into();
 			},
 			_ => todo!("new shrine type {:?}", shrine.0),
 		}

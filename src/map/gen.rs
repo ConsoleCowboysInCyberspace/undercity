@@ -227,7 +227,7 @@ fn generate_room(rng: &MapRng, rect: TileRect) -> (MutMap, Vec<TilePos>) {
 	let shrineType = [
 		Landmark::ShrineIdol,
 		Landmark::ShrineSkulls,
-		// Landmark::ShrineScroll,
+		Landmark::ShrineScroll,
 	]
 	.choose(&mut *rng.as_mut())
 	.copied()
