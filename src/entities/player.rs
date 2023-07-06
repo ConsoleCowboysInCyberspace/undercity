@@ -31,6 +31,8 @@ fn setup_app(app: &mut App) {
 		zoom_camera,
 		move_cursor,
 		interact.after(move_cursor),
+		#[cfg(debug_assertions)]
+		teleport,
 		update_gui,
 	));
 }
@@ -244,6 +246,26 @@ fn interact(world: &mut World) {
 		world
 			.entity_mut(target)
 			.insert(InteractEvent { source: player });
+	}
+}
+
+#[cfg(debug_assertions)]
+fn teleport(
+	mut player: Query<&mut Transform, With<Player>>,
+	keyboard: Res<Input<KeyCode>>,
+	mut savedPos: Local<Option<Vec2>>,
+) {
+	if keyboard.just_pressed(KeyCode::Y) {
+		*savedPos = Some(player.single().translation.xy());
+		eprintln!("saved position {:?}", savedPos.unwrap());
+	}
+
+	if keyboard.just_pressed(KeyCode::T) {
+		if let Some(pos) = *savedPos {
+			let translation = &mut player.single_mut().translation;
+			*translation = (pos, translation.z).into();
+			eprintln!("recalled position {:?}", savedPos.unwrap());
+		}
 	}
 }
 
