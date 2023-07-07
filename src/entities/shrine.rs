@@ -6,7 +6,7 @@ use rand::{thread_rng, Rng};
 use super::player::Player;
 use super::Health;
 use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, Map, MutMap, TilePos, TileType};
-use crate::{InteractEvent, Interactible, IsoSpriteBundle};
+use crate::{InteractEvent, Interactible, IsoSpriteBundle, print_feed};
 
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]
@@ -73,12 +73,16 @@ fn handle_interactions(
 		cmd.entity(shrineEnt).remove::<InteractEvent>();
 		match shrine.0 {
 			ShrineType::Heal => {
+				print_feed!("The shrine heals you for 25 HP!");
 				player.single_mut().1.take_healing(25.0);
 			},
 			ShrineType::Damage => {
+				print_feed!("The shrine damages you for 10 HP!");
 				player.single_mut().1.take_damage(10.0);
 			},
 			ShrineType::Blink => {
+				print_feed!("The shrine drives you through the aether!");
+
 				let transform = &mut player.single_mut().0;
 				let usedTiles = map.used_tiles();
 				let pos = {

@@ -202,6 +202,8 @@ fn setup_map(
 
 	let map = map.into_entities(&mut cmd, &assets);
 	cmd.insert_resource(map);
+
+	print_feed!("Your nose is assaulted by a musty breeze, as you enter... The Undercity.");
 }
 
 fn toggle_rapier_debug(keyboard: Res<Input<KeyCode>>, mut ctx: ResMut<DebugRenderContext>) {

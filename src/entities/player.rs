@@ -1,5 +1,7 @@
+use std::cmp::Ordering;
 use std::f32::consts::PI;
 use std::fmt::Write;
+use std::sync::{mpsc, OnceLock, Once};
 
 use bevy::input::mouse::MouseWheel;
 use bevy::math::{vec2, vec3, Vec3Swizzles};
@@ -275,6 +277,31 @@ struct HealthBarRect;
 #[derive(Component)]
 struct HealthBarText;
 
+#[derive(Component)]
+struct Feed;
+
+#[derive(Clone, Copy, Component)]
+struct FeedMessage(f32);
+
+type FeedQueue = (mpsc::Sender<String>, mpsc::Receiver<String>);
+static mut feedQueue: OnceLock<FeedQueue> = OnceLock::new();
+
+fn get_feed_queue() -> &'static FeedQueue {
+	unsafe {&feedQueue}.get_or_init(|| mpsc::channel())
+}
+
+pub fn submit_feed_message(msg: String) {
+	get_feed_queue().0.send(msg);
+}
+
+#[macro_export]
+macro_rules! print_feed {
+	($($args:tt)*) => {
+		crate::entities::player::submit_feed_message(format!($($args)*))
+	};
+}
+use print_feed;
+
 fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
 	let (width, height) = (200.0, 50.0);
 
@@ -338,19 +365,78 @@ fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
 			},
 		));
 	});
+
+	cmd.spawn((
+		Feed,
+		NodeBundle {
+			style: Style {
+				size: Size::all(Val::Auto),
+				padding: UiRect::all(Val::Px(5.0)),
+				flex_direction: FlexDirection::Column,
+				position_type: PositionType::Absolute,
+				position: UiRect {
+					top: Val::Percent(0.0),
+					left: Val::Percent(0.0),
+					..default()
+				},
+				..default()
+			},
+			background_color: BackgroundColor(Color::rgba(0.25, 0.25, 0.25, 0.75)),
+			..default()
+		}
+	));
 }
 
 fn update_gui(
-	health: Query<&Health, (With<Player>, Changed<Health>)>,
-	mut rect: Query<&mut Style, With<HealthBarRect>>,
-	mut text: Query<&mut Text, With<HealthBarText>>,
-	time: Res<Time>,
-) {
-	for &Health(health) in &health {
-		rect.single_mut().size.width = Val::Percent(health);
+	mut cmd: Commands,
 
-		let text = &mut text.single_mut().sections[0].value;
+	health: Query<&Health, (With<Player>, Changed<Health>)>,
+	mut healthRect: Query<&mut Style, With<HealthBarRect>>,
+	mut healthText: Query<&mut Text, With<HealthBarText>>,
+
+	feedBox: Query<Entity, With<Feed>>,
+	messages: Query<(Entity, &FeedMessage)>,
+
+	assets: Res<AssetServer>,
+	time: Res<Time>,
+
+	mut feedMessageEnts: Local<Vec<(Entity, FeedMessage)>>,
+) {
+	const feedFontSize: f32 = 24.0;
+	const feedMaxMessages: usize = 10;
+
+	for &Health(health) in &health {
+		healthRect.single_mut().size.width = Val::Percent(health);
+
+		let text = &mut healthText.single_mut().sections[0].value;
 		text.clear();
 		write!(text, "{health:.0}").unwrap();
+	}
+
+	let mut newMessages = false;
+	let feedBox = feedBox.single();
+	while let Ok(msg) = get_feed_queue().1.try_recv() {
+		newMessages = true;
+		let child = cmd.spawn((FeedMessage(time.elapsed_seconds()), TextBundle {
+			text: Text::from_section(msg, TextStyle {
+				font: assets.load("fonts/RedHatDisplay.ttf"),
+				font_size: feedFontSize,
+				color: Color::WHITE,
+			}),
+			..default()
+		})).id();
+		cmd.entity(feedBox).add_child(child);
+	}
+	if newMessages {
+		feedMessageEnts.clear();
+		feedMessageEnts.extend(messages.into_iter().map(|(id, &msg)| (id, msg)));
+		if feedMessageEnts.len() > feedMaxMessages {
+			feedMessageEnts.sort_by(|&(_, l), &(_, r)| l.0.partial_cmp(&r.0).unwrap_or(Ordering::Equal).reverse());
+			while feedMessageEnts.len() > feedMaxMessages {
+				let ent = feedMessageEnts.pop().unwrap().0;
+				cmd.entity(feedBox).remove_children(&[ent]);
+				cmd.entity(ent).despawn();
+			}
+		}
 	}
 }
