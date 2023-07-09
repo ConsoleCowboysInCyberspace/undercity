@@ -93,6 +93,9 @@ impl Tile {
 pub struct TilePair {
 	pub foreground: Tile,
 	pub background: Tile,
+
+	/// Whether this tile has been replaced by a dynamic entity.
+	pub plucked: bool,
 }
 
 impl TilePair {
@@ -154,6 +157,7 @@ impl TilePair {
 		let Self {
 			foreground,
 			background,
+			plucked,
 		} = self;
 		let pos = pos.as_vec2();
 		let mut foreground = if foreground.is_empty() {
@@ -196,17 +200,18 @@ impl Chunk {
 	pub const diameterTiles: usize = 32;
 
 	pub const fn new(pos: ChunkPos) -> Self {
-		let default = Tile {
+		let empty = Tile {
 			ty: TileType::Empty,
 			tileset: Tileset::Normal,
 		};
-		let default = TilePair {
-			foreground: default,
-			background: default,
+		let empty = TilePair {
+			foreground: empty,
+			background: empty,
+			plucked: false,
 		};
 		Self {
 			pos,
-			tiles: [default; Self::diameterTiles.pow(2)],
+			tiles: [empty; Self::diameterTiles.pow(2)],
 		}
 	}
 
@@ -488,11 +493,10 @@ impl MutMap {
 		);
 	}
 
-	/// Finds all tiles matching the given `predicate`, replaces them with
-	/// `replacement`, and returns (the foreground of) those that matched.
+	/// Returns all tiles matching the given `predicate`, and marks them as
+	/// having been [plucked](`TilePair::plucked`).
 	pub fn pluck_tiles(
 		&mut self,
-		replacement: TileType,
 		mut predicate: impl FnMut(TilePos, &TilePair) -> bool,
 	) -> Vec<(TilePos, Tile)> {
 		let mut res = vec![];
@@ -502,11 +506,7 @@ impl MutMap {
 				continue;
 			}
 
-			self[pos].set(Tile {
-				ty: replacement,
-				// landmarks may not have correct tileset, but the floor probably will
-				..tile.background
-			});
+			self[pos].plucked = true;
 			res.push((pos, tile.foreground));
 		}
 		res

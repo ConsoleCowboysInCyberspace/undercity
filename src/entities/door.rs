@@ -63,14 +63,8 @@ fn setup_app(app: &mut App) {
 
 #[linkme::distributed_slice(crate::setupMap)]
 fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
-	let mut doors = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
-		pair.is_door()
-	});
-	doors.extend(
-		map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
-			pair.is_door()
-		}),
-	);
+	let mut doors = map.pluck_tiles(|_, pair| pair.is_door());
+	doors.extend(map.pluck_tiles(|_, pair| pair.is_door()));
 	for (pos, tile) in doors {
 		make_door(cmd, &assets, pos, tile);
 	}

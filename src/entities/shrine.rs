@@ -6,7 +6,7 @@ use rand::{thread_rng, Rng};
 use super::player::Player;
 use super::Health;
 use crate::map::{tileDiameter, tileRadius, FloorType, Landmark, Map, MutMap, TilePos, TileType};
-use crate::{InteractEvent, Interactible, IsoSpriteBundle, print_feed};
+use crate::{print_feed, InteractEvent, Interactible, IsoSpriteBundle};
 
 #[derive(Clone, Copy, Debug)]
 #[repr(u8)]
@@ -40,7 +40,7 @@ fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
 	const radius: f32 = tileRadius / 2.0 * 0.9;
 	let collider = Collider::cuboid(radius, radius);
 
-	let shrines = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+	let shrines = map.pluck_tiles(|_, pair| {
 		use Landmark::*;
 		matches!(
 			pair.foreground.ty,
@@ -51,7 +51,9 @@ fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
 		)
 	});
 	for (pos, tile) in shrines {
-		let TileType::Landmark { ty: landmark, flip } = tile.ty else { unreachable!() };
+		let TileType::Landmark { ty: landmark, flip } = tile.ty else {
+			unreachable!()
+		};
 		let (sprite, _) = tile.into_bundle(pos.as_vec2(), assets);
 		cmd.spawn((
 			Shrine(ShrineType::from(landmark)),
@@ -90,7 +92,9 @@ fn handle_interactions(
 					let y = thread_rng().gen_range(usedTiles.min.y ..= usedTiles.max.y);
 					TilePos::of(x, y)
 				};
-				let Some(newPos) = map.find_tile(pos, |_, tile| tile.is_floor()) else { continue };
+				let Some(newPos) = map.find_tile(pos, |_, tile| tile.is_floor()) else {
+					continue;
+				};
 				transform.translation =
 					(newPos.as_vec2() * tileRadius, transform.translation.z).into();
 			},

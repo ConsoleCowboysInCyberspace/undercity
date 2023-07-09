@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 use std::f32::consts::PI;
 use std::fmt::Write;
-use std::sync::{mpsc, OnceLock, Once};
+use std::sync::{mpsc, Once, OnceLock};
 
 use bevy::input::mouse::MouseWheel;
 use bevy::math::{vec2, vec3, Vec3Swizzles};
@@ -41,7 +41,7 @@ fn setup_app(app: &mut App) {
 
 #[linkme::distributed_slice(crate::setupMap)]
 fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
-	let playerSpawns = map.pluck_tiles(TileType::Floor(FloorType::Tileset), |_, pair| {
+	let playerSpawns = map.pluck_tiles(|_, pair| {
 		matches!(
 			pair.foreground.ty,
 			TileType::Landmark {
@@ -244,7 +244,9 @@ fn interact(world: &mut World) {
 		}
 
 		let ents = find_interactible_entities(cursorPos, 8.0, world);
-		let Some(&target) = ents.first() else { return; };
+		let Some(&target) = ents.first() else {
+			return;
+		};
 		world
 			.entity_mut(target)
 			.insert(InteractEvent { source: player });
@@ -287,7 +289,7 @@ type FeedQueue = (mpsc::Sender<String>, mpsc::Receiver<String>);
 static mut feedQueue: OnceLock<FeedQueue> = OnceLock::new();
 
 fn get_feed_queue() -> &'static FeedQueue {
-	unsafe {&feedQueue}.get_or_init(|| mpsc::channel())
+	unsafe { &feedQueue }.get_or_init(|| mpsc::channel())
 }
 
 pub fn submit_feed_message(msg: String) {
@@ -383,7 +385,7 @@ fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
 			},
 			background_color: BackgroundColor(Color::rgba(0.25, 0.25, 0.25, 0.75)),
 			..default()
-		}
+		},
 	));
 }
 
@@ -417,21 +419,31 @@ fn update_gui(
 	let feedBox = feedBox.single();
 	while let Ok(msg) = get_feed_queue().1.try_recv() {
 		newMessages = true;
-		let child = cmd.spawn((FeedMessage(time.elapsed_seconds()), TextBundle {
-			text: Text::from_section(msg, TextStyle {
-				font: assets.load("fonts/RedHatDisplay.ttf"),
-				font_size: feedFontSize,
-				color: Color::WHITE,
-			}),
-			..default()
-		})).id();
+		let child = cmd
+			.spawn((
+				FeedMessage(time.elapsed_seconds()),
+				TextBundle {
+					text: Text::from_section(
+						msg,
+						TextStyle {
+							font: assets.load("fonts/RedHatDisplay.ttf"),
+							font_size: feedFontSize,
+							color: Color::WHITE,
+						},
+					),
+					..default()
+				},
+			))
+			.id();
 		cmd.entity(feedBox).add_child(child);
 	}
 	if newMessages {
 		feedMessageEnts.clear();
 		feedMessageEnts.extend(messages.into_iter().map(|(id, &msg)| (id, msg)));
 		if feedMessageEnts.len() > feedMaxMessages {
-			feedMessageEnts.sort_by(|&(_, l), &(_, r)| l.0.partial_cmp(&r.0).unwrap_or(Ordering::Equal).reverse());
+			feedMessageEnts.sort_by(|&(_, l), &(_, r)| {
+				l.0.partial_cmp(&r.0).unwrap_or(Ordering::Equal).reverse()
+			});
 			while feedMessageEnts.len() > feedMaxMessages {
 				let ent = feedMessageEnts.pop().unwrap().0;
 				cmd.entity(feedBox).remove_children(&[ent]);
