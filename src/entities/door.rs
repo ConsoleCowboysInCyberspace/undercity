@@ -28,34 +28,6 @@ impl Door {
 	}
 }
 
-fn make_door(cmd: &mut Commands, assets: &AssetServer, pos: TilePos, tile: Tile) {
-	assert!(matches!(
-		tile.ty,
-		TileType::DoorNS { .. } | TileType::DoorEW { .. }
-	));
-	let (sprite, _) = tile.into_bundle(pos.as_vec2(), assets);
-
-	let shape = match tile.ty {
-		TileType::DoorNS { .. } => WallShape::Northsouth,
-		TileType::DoorEW { .. } => WallShape::Eastwest,
-		_ => unreachable!(),
-	};
-	let collider = shape.collider();
-	assert!(collider.translation.is_none());
-	let collider = collider.collider;
-
-	// #[cfg(none)]
-	cmd.spawn((
-		Door(tile, collider.clone()),
-		sprite,
-		Interactible,
-		RigidBody::Fixed,
-		collider,
-		CollisionGroups::default(),
-		SolverGroups::default(),
-	));
-}
-
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
 	app.add_systems((update_doors, handle_interactions));
@@ -65,7 +37,26 @@ fn setup_app(app: &mut App) {
 fn setup_map(map: &mut MutMap, cmd: &mut Commands, assets: &AssetServer) {
 	let doors = map.pluck_tiles(|_, pair| pair.is_door());
 	for (pos, tile) in doors {
-		make_door(cmd, &assets, pos, tile);
+		let (sprite, _) = tile.into_bundle(pos.as_vec2(), assets);
+
+		let shape = match tile.ty {
+			TileType::DoorNS { .. } => WallShape::Northsouth,
+			TileType::DoorEW { .. } => WallShape::Eastwest,
+			_ => unreachable!(),
+		};
+		let collider = shape.collider();
+		assert!(collider.translation.is_none());
+		let collider = collider.collider;
+
+		cmd.spawn((
+			Door(tile, collider.clone()),
+			sprite,
+			Interactible,
+			RigidBody::Fixed,
+			collider,
+			CollisionGroups::default(),
+			SolverGroups::default(),
+		));
 	}
 }
 
