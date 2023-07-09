@@ -507,7 +507,9 @@ impl MutMap {
 		let mut res = vec![];
 		for pos in self.used_tiles().tiles() {
 			let tile = self[pos];
-			if !predicate(pos, &tile) {
+			if tile.plucked || // don't double-pluck tiles
+				!predicate(pos, &tile)
+			{
 				continue;
 			}
 
