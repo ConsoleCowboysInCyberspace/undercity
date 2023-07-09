@@ -155,10 +155,15 @@ impl TilePair {
 		debug_assert!(!self.is_empty(), "Attempting to spawn empty TilePair");
 
 		let Self {
-			foreground,
+			mut foreground,
 			background,
 			plucked,
 		} = self;
+		if plucked {
+			// plucked tiles are rendered by dynamic entities
+			foreground.ty = TileType::Empty;
+		}
+
 		let pos = pos.as_vec2();
 		let mut foreground = if foreground.is_empty() {
 			cmd.spawn((
