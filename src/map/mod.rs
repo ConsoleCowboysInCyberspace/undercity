@@ -1,27 +1,31 @@
 pub mod data;
 pub mod gen;
 
-use std::cell::{RefCell, RefMut};
+use std::cell::{RefCell, RefMut, OnceCell};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
 use std::rc::Rc;
 
+use anyhow::anyhow;
+use bevy::asset::AssetIo;
 use bevy::math::{ivec2, uvec2, vec2};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 use rand::rngs::SmallRng;
 use rand::{thread_rng, Rng, SeedableRng};
+use serde::Deserialize;
 
 pub use self::data::*;
-use crate::{IsoSprite, IsoSpriteBundle};
+use crate::{IsoSprite, IsoSpriteBundle, AResult};
 
 pub const tileDiameter: f32 = 64.0;
 pub const tileRadius: f32 = tileDiameter / 2.0;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 pub struct Tile {
 	pub ty: TileType,
+	#[serde(default)]
 	pub tileset: Tileset,
 }
 
@@ -89,12 +93,14 @@ impl Tile {
 	}
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 pub struct TilePair {
+	#[serde(default)]
 	pub foreground: Tile,
 	pub background: Tile,
 
 	/// Whether this tile has been replaced by a dynamic entity.
+	#[serde(default)]
 	pub plucked: bool,
 }
 
@@ -531,5 +537,57 @@ impl Deref for MutMap {
 impl DerefMut for MutMap {
 	fn deref_mut(&mut self) -> &mut Self::Target {
 		&mut self.map
+	}
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Prefab {
+	key: HashMap<char, TilePair>,
+	map: Vec<Box<str>>,
+	#[serde(skip)]
+	size: OnceCell<UVec2>,
+}
+
+impl Prefab {
+	pub fn load_blocking(assets: &AssetServer, path: &str) -> AResult<Self> {
+		let io = assets
+			.asset_io()
+			.downcast_ref::<bevy::asset::FileAssetIo>()
+			.ok_or_else(|| anyhow!("wef"))?;
+		let root = io.root_path();
+		let path = root.join(path);
+
+		let str = std::fs::read_to_string(path)?;
+		Ok(ron::from_str(&str)?)
+	}
+
+	pub fn into_map(self, seed: Option<u64>) -> AResult<MutMap> {
+		let mut res = MutMap::new(seed);
+		for (pos, tile) in self.iter() {
+			res[pos] = tile;
+		}
+		Ok(res)
+	}
+
+	pub fn size(&self) -> UVec2 {
+		*self.size.get_or_init(|| UVec2::new(
+			self.map.iter().map(|s| s.len()).max().unwrap_or(0) as _,
+			self.map.len() as _,
+		))
+	}
+
+	pub fn iter(&self) -> impl '_ + Iterator<Item = (TilePos, TilePair)> {
+		self.map.iter().enumerate().flat_map(move |(y, line)|
+			line.chars().enumerate().filter_map(move |(x, char)|
+				if char == ' ' { None } else { Some((TilePos::of(x as _, y as _), self.key[&char])) }
+			)
+		)
+	}
+
+	pub fn copy_into(&self, map: &mut MutMap, origin: TilePos) {
+		for (pos, tile) in self.iter() {
+			let pos = TilePos::from(*pos + *origin);
+			map[pos] = tile;
+		}
 	}
 }

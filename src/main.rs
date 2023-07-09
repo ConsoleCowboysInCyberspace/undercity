@@ -194,7 +194,9 @@ fn setup_map(
 ) {
 	use crate::map::*;
 
-	let mut map = map::gen::generate_map(0);
+	// let mut map = map::gen::generate_map(0);
+	let prefab = map::Prefab::load_blocking(&assets, "prefabs/test.ron").unwrap();
+	let mut map = prefab.into_map(None).unwrap();
 
 	for func in setupMap {
 		func(&mut map, &mut cmd, &assets);

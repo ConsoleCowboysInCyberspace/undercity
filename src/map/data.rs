@@ -4,11 +4,12 @@ use bevy::ecs::system::EntityCommands;
 use bevy::math::{ivec2, vec2};
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
+use serde::Deserialize;
 
 use super::tileRadius;
 use crate::map::Chunk;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[repr(u8)]
 pub enum Tileset {
 	#[default]
@@ -111,7 +112,7 @@ impl From<(Collider, Vec2)> for PositionedCollider {
 	}
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[repr(u8)] // tileset atlases
 pub enum WallShape {
 	#[default]
@@ -211,7 +212,7 @@ impl WallShape {
 	}
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[repr(u8)] // misc atlas
 pub enum Landmark {
 	#[default]
@@ -275,7 +276,7 @@ pub enum Landmark {
 	ExplosionSmokeDark = 180,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 #[repr(u8)] // misc atlas (except `::Tileset`)
 pub enum FloorType {
 	#[default]
@@ -288,20 +289,23 @@ pub enum FloorType {
 	Slab = 74,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Deserialize)]
 pub enum TileType {
 	#[default]
 	Empty,
 	Floor(FloorType),
 	Wall(WallShape),
 	DoorNS {
+		#[serde(default)]
 		open: bool,
 	},
 	DoorEW {
+		#[serde(default)]
 		open: bool,
 	},
 	Landmark {
 		ty: Landmark,
+		#[serde(default)]
 		flip: bool,
 	},
 }

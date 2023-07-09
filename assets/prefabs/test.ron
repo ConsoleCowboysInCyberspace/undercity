@@ -1,0 +1,32 @@
+(
+	key: {
+		'w': (
+			foreground: (ty: Wall(Solid), tileset: BrickCyan),
+			background: (ty: Floor(Tileset), tileset: BrickCyan),
+		),
+		'f': (
+			background: (ty: Floor(Tileset), tileset: BrickCyan),
+		),
+		's': (
+			foreground: (ty: Landmark(ty: SpawnPlayer)),
+			background: (ty: Floor(Tileset), tileset: BrickCyan),
+		),
+		'd': (
+			foreground: (ty: DoorEW(), tileset: BrickCyan),
+			background: (ty: Floor(Tileset), tileset: BrickCyan),
+		),
+		'D': (
+			foreground: (ty: DoorNS(), tileset: BrickCyan),
+			background: (ty: Floor(Tileset), tileset: BrickCyan),
+		),
+	},
+	map: [
+		"  wdw  ",
+		" wwfww ",
+		"wwfffww",
+		"DffsffD",
+		"wwfffww",
+		" wwfww ",
+		"  wdw  ",
+	],
+)
