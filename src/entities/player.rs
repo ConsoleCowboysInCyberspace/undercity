@@ -26,17 +26,20 @@ pub struct Cursor;
 
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
-	app.add_startup_systems((startup, startup_gui));
-	app.add_systems((
-		move_player,
-		move_camera.after(move_player),
-		zoom_camera,
-		move_cursor,
-		interact.after(move_cursor),
-		#[cfg(debug_assertions)]
-		teleport,
-		update_gui,
-	));
+	app.add_systems(Startup, (startup, startup_gui));
+	app.add_systems(
+		Update,
+		(
+			move_player,
+			move_camera.after(move_player),
+			zoom_camera,
+			move_cursor,
+			interact.after(move_cursor),
+			#[cfg(debug_assertions)]
+			teleport,
+			update_gui,
+		),
+	);
 }
 
 #[linkme::distributed_slice(crate::setupMap)]
@@ -141,7 +144,7 @@ fn move_player(
 	}
 	vel = vel.normalize_or_zero();
 
-	let sprint = if keyboard.pressed(KeyCode::LShift) {
+	let sprint = if keyboard.pressed(KeyCode::ShiftLeft) {
 		4.0
 	} else {
 		1.0
@@ -309,15 +312,13 @@ fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
 
 	cmd.spawn(NodeBundle {
 		style: Style {
-			size: Size::new(Val::Px(width), Val::Px(height)),
+			width: Val::Px(width),
+			height: Val::Px(height),
+			position_type: PositionType::Absolute,
+			bottom: Val::Px(10.0),
+			left: Val::Px(10.0),
 			align_items: AlignItems::Center,
 			justify_content: JustifyContent::Center,
-			position_type: PositionType::Absolute,
-			position: UiRect {
-				bottom: Val::Px(10.0),
-				left: Val::Px(10.0),
-				..default()
-			},
 			..default()
 		},
 		background_color: BackgroundColor(Color::GRAY),
@@ -328,13 +329,11 @@ fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
 			HealthBarRect,
 			NodeBundle {
 				style: Style {
-					size: Size::new(Val::Px(width), Val::Px(height - 5.0)),
+					width: Val::Px(width),
+					height: Val::Px(height - 5.0),
 					position_type: PositionType::Absolute,
-					position: UiRect {
-						top: Val::Px(2.5),
-						left: Val::Percent(0.0),
-						..default()
-					},
+					top: Val::Px(2.5),
+					left: Val::Percent(0.0),
 					..default()
 				},
 				background_color: BackgroundColor(Color::RED),
@@ -354,12 +353,9 @@ fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
 					},
 				),
 				style: Style {
-					size: Size::new(Val::Auto, Val::Px(height)),
+					height: Val::Px(height),
 					position_type: PositionType::Absolute,
-					position: UiRect {
-						top: Val::Percent(0.0),
-						..default()
-					},
+					top: Val::Percent(0.0),
 					align_self: AlignSelf::Center,
 					..default()
 				},
@@ -372,15 +368,12 @@ fn startup_gui(mut cmd: Commands, assets: Res<AssetServer>) {
 		Feed,
 		NodeBundle {
 			style: Style {
-				size: Size::all(Val::Auto),
+				max_width: Val::Vw(100.0),
 				padding: UiRect::all(Val::Px(5.0)),
 				flex_direction: FlexDirection::Column,
 				position_type: PositionType::Absolute,
-				position: UiRect {
-					top: Val::Percent(0.0),
-					left: Val::Percent(0.0),
-					..default()
-				},
+				top: Val::Percent(0.0),
+				left: Val::Percent(0.0),
 				..default()
 			},
 			background_color: BackgroundColor(Color::rgba(0.25, 0.25, 0.25, 0.75)),
@@ -408,7 +401,7 @@ fn update_gui(
 	const feedMaxMessages: usize = 10;
 
 	for &Health(health) in &health {
-		healthRect.single_mut().size.width = Val::Percent(health);
+		healthRect.single_mut().width = Val::Percent(health);
 
 		let text = &mut healthText.single_mut().sections[0].value;
 		text.clear();

@@ -32,7 +32,7 @@ pub struct Shrine(ShrineType);
 
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
-	app.add_system(handle_interactions);
+	app.add_systems(Update, handle_interactions);
 }
 
 #[linkme::distributed_slice(crate::setupMap)]

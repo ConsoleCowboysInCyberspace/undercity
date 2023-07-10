@@ -30,7 +30,7 @@ impl Door {
 
 #[linkme::distributed_slice(crate::setupApp)]
 fn setup_app(app: &mut App) {
-	app.add_systems((update_doors, handle_interactions));
+	app.add_systems(Update, (update_doors, handle_interactions));
 }
 
 #[linkme::distributed_slice(crate::setupMap)]

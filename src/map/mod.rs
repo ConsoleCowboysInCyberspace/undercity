@@ -1,7 +1,7 @@
 pub mod data;
 pub mod gen;
 
-use std::cell::{RefCell, RefMut, OnceCell};
+use std::cell::{OnceCell, RefCell, RefMut};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use std::ops::{Deref, DerefMut, Index, IndexMut};
@@ -17,7 +17,7 @@ use rand::{thread_rng, Rng, SeedableRng};
 use serde::Deserialize;
 
 pub use self::data::*;
-use crate::{IsoSprite, IsoSpriteBundle, AResult};
+use crate::{AResult, IsoSprite, IsoSpriteBundle};
 
 pub const tileDiameter: f32 = 64.0;
 pub const tileRadius: f32 = tileDiameter / 2.0;
@@ -570,18 +570,24 @@ impl Prefab {
 	}
 
 	pub fn size(&self) -> UVec2 {
-		*self.size.get_or_init(|| UVec2::new(
-			self.map.iter().map(|s| s.len()).max().unwrap_or(0) as _,
-			self.map.len() as _,
-		))
+		*self.size.get_or_init(|| {
+			UVec2::new(
+				self.map.iter().map(|s| s.len()).max().unwrap_or(0) as _,
+				self.map.len() as _,
+			)
+		})
 	}
 
 	pub fn iter(&self) -> impl '_ + Iterator<Item = (TilePos, TilePair)> {
-		self.map.iter().enumerate().flat_map(move |(y, line)|
-			line.chars().enumerate().filter_map(move |(x, char)|
-				if char == ' ' { None } else { Some((TilePos::of(x as _, y as _), self.key[&char])) }
-			)
-		)
+		self.map.iter().enumerate().flat_map(move |(y, line)| {
+			line.chars().enumerate().filter_map(move |(x, char)| {
+				if char == ' ' {
+					None
+				} else {
+					Some((TilePos::of(x as _, y as _), self.key[&char]))
+				}
+			})
+		})
 	}
 
 	pub fn copy_into(&self, map: &mut MutMap, origin: TilePos) {

@@ -42,10 +42,8 @@ pub struct IsoSpriteBundle {
 
 	pub sprite: IsoSprite,
 
-	#[bundle]
 	pub transform: TransformBundle,
 
-	#[bundle]
 	pub visibility: VisibilityBundle,
 }
 
@@ -154,32 +152,28 @@ fn main() {
 	let mut rapierConfig = RapierConfiguration::default();
 	rapierConfig.gravity = Vec2::ZERO;
 	app.insert_resource(rapierConfig);
-	app.add_plugin(RapierPhysicsPlugin::<()>::pixels_per_meter(
+	app.add_plugins(RapierPhysicsPlugin::<()>::pixels_per_meter(
 		crate::map::tileDiameter,
 	));
 	#[cfg(debug_assertions)]
 	{
-		app.add_plugin(
-			RapierDebugRenderPlugin::default()
-				.always_on_top()
-				.disabled(),
-		);
-		app.add_system(toggle_rapier_debug);
+		app.add_plugins(RapierDebugRenderPlugin::default().disabled());
+		app.add_systems(Update, toggle_rapier_debug);
 	}
 
 	for func in setupApp {
 		func(&mut app);
 	}
 
-	app.sub_app_mut(RenderApp).add_system(
-		isosprite_extract
-			.after(SpriteSystem::ExtractSprites)
-			.in_schedule(ExtractSchedule),
+	app.sub_app_mut(RenderApp).add_systems(
+		ExtractSchedule,
+		isosprite_extract.after(SpriteSystem::ExtractSprites),
 	);
 
-	app.add_system(close_on_esc);
-	app.add_startup_systems(
-		(apply_system_buffers, setup_map)
+	app.add_systems(Update, close_on_esc);
+	app.add_systems(
+		Startup,
+		(apply_deferred, setup_map)
 			.chain()
 			.after(entities::player::startup),
 	);
